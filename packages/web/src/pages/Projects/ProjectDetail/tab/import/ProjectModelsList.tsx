@@ -49,6 +49,7 @@ type ProjectModelsListProps = {
   refreshKey?: number;
   onRestartImport?: (item: ImportJobItem) => void;
   headerAction?: ReactNode;
+  isActive?: boolean;
 };
 
 export function ProjectModelsList({
@@ -56,6 +57,7 @@ export function ProjectModelsList({
   refreshKey = 0,
   onRestartImport,
   headerAction,
+  isActive = true,
 }: ProjectModelsListProps) {
   const [items, setItems] = useState<ImportJobItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -285,7 +287,7 @@ export function ProjectModelsList({
         <div className="models-detail-title">{"상세 정보"}</div>
         <Flex vertical gap={12} className="models-detail-body">
           <div className="models-detail-viewer">
-            <IfcViewer fileUrl={selected?.file_url ?? null} />
+            <IfcViewer fileUrl={selected?.file_url ?? null} active={isActive} />
           </div>
           <div className="models-detail-info">
             {detail}

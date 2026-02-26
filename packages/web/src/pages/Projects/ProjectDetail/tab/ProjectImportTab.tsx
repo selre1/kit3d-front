@@ -10,9 +10,10 @@ import { ProjectModelsList } from "./import/ProjectModelsList";
 type ProjectImportTabProps = {
   projectId: string;
   loading: boolean;
+  isActive?: boolean;
 };
 
-export function ProjectImportTab({ projectId, loading }: ProjectImportTabProps) {
+export function ProjectImportTab({ projectId, loading, isActive = true }: ProjectImportTabProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState(0);
@@ -100,6 +101,7 @@ export function ProjectImportTab({ projectId, loading }: ProjectImportTabProps) 
           <ProjectModelsList
             projectId={projectId}
             refreshKey={refreshKey}
+            isActive={isActive}
             onRestartImport={handleRestartImport}
             headerAction={
               <Button

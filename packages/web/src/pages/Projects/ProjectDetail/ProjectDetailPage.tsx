@@ -62,7 +62,13 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
             {
               key: "import",
               label: "임포트",
-              children: <ProjectImportTab projectId={projectId} loading={loading} />,
+              children: (
+                <ProjectImportTab
+                  projectId={projectId}
+                  loading={loading}
+                  isActive={activeKey === "import"}
+                />
+              ),
               icon: <DatabaseFilled/>
             },
             {

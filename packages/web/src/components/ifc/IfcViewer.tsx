@@ -18,6 +18,7 @@ import * as THREE from "three";
 
 type IfcViewerProps = {
   fileUrl?: string | null;
+  active?: boolean;
 };
 
 type EntityGroups = Record<
@@ -43,7 +44,7 @@ type CameraControlsApi = {
   update?: (delta: number) => boolean;
 };
 
-export function IfcViewer({ fileUrl }: IfcViewerProps) {
+export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const componentsRef = useRef<OBC.Components | null>(null);
@@ -65,7 +66,7 @@ export function IfcViewer({ fileUrl }: IfcViewerProps) {
   const [entityVisibility, setEntityVisibility] = useState<Record<string, boolean>>({});
   const [classifierOpen, setClassifierOpen] = useState(false);
 
-  useEffect(() => {
+  const resetViewerState = () => {
     setViewerEnabled(false);
     setEnabledFileUrl(null);
     setViewerLoading(false);
@@ -83,6 +84,16 @@ export function IfcViewer({ fileUrl }: IfcViewerProps) {
       worldRef.current.scene.three.remove(modelRef.current as never);
       modelRef.current = null;
     }
+  };
+
+  useEffect(() => {
+    if (!active) {
+      resetViewerState();
+    }
+  }, [active]);
+
+  useEffect(() => {
+    resetViewerState();
   }, [fileUrl]);
 
   useEffect(() => {
