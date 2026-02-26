@@ -5,6 +5,7 @@ import {
   Checkbox,
   Collapse,
   Empty,
+  Progress,
   Spin,
 } from "antd";
 import {
@@ -57,6 +58,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [viewerLoading, setViewerLoading] = useState(false);
+  const [viewerProgress, setViewerProgress] = useState<number | null>(null);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [viewerEnabled, setViewerEnabled] = useState(false);
   const [enabledFileUrl, setEnabledFileUrl] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
     setViewerEnabled(false);
     setEnabledFileUrl(null);
     setViewerLoading(false);
+    setViewerProgress(null);
     setViewerError(null);
     setModelReady(false);
     setEntityGroups(null);
@@ -192,6 +195,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
     const controller = new AbortController();
     abortRef.current = controller;
     setViewerLoading(true);
+    setViewerProgress(null);
     setViewerError(null);
 
     (async () => {
@@ -200,8 +204,32 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
       if (!response.ok) {
         throw new Error(`Failed to load IFC: ${response.status}`);
       }
-      const data = await response.arrayBuffer();
-      const buffer = new Uint8Array(data);
+      const total = Number(response.headers.get("Content-Length") ?? 0);
+      let buffer: Uint8Array;
+      if (!response.body || !total) {
+        const data = await response.arrayBuffer();
+        buffer = new Uint8Array(data);
+        setViewerProgress(100);
+      } else {
+        const reader = response.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let received = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value) {
+            chunks.push(value);
+            received += value.length;
+            setViewerProgress(Math.min(100, Math.round((received / total) * 100)));
+          }
+        }
+        buffer = new Uint8Array(received);
+        let offset = 0;
+        for (const chunk of chunks) {
+          buffer.set(chunk, offset);
+          offset += chunk.length;
+        }
+      }
       const model = await ifcLoader.load(buffer);
       if (cancelled) return;
       if (modelRef.current) {
@@ -242,6 +270,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
       cancelled = true;
       controller.abort();
       setViewerLoading(false);
+      setViewerProgress(null);
       setModelReady(false);
       if (abortRef.current === controller) {
         abortRef.current = null;
@@ -366,7 +395,11 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
       {viewerError ? <div className="ifc-viewer-error">{viewerError}</div> : null}
       {viewerEnabled && viewerLoading ? (
         <div className="ifc-viewer-overlay">
-          <Spin size="small" />
+          {typeof viewerProgress === "number" ? (
+            <Progress size="small" percent={viewerProgress} />
+          ) : (
+            <Spin size="small" />
+          )}
         </div>
       ) : null}
     </div>
