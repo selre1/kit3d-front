@@ -1,0 +1,245 @@
+.cesium-viewer-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+.cesium-viewer-canvas {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.cesium-viewer-root {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hud-compass {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 64px;
+  height: 64px;
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.hud-compass-icon {
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 50%;
+}
+
+.cesium-toolbar {
+  align-self: center;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 0;
+  background: rgba(10, 14, 20, 0.92) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.35);
+  color: #e8eef9;
+}
+
+.cesium-toolbar .ant-card-body {
+  padding: 8px 12px;
+}
+
+.cesium-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cesium-toolbar-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  color: #cbd5f5;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cesium-toolbar-icon:hover {
+  color: #f5f7ff;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(96, 197, 179, 0.45);
+}
+
+.cesium-toolbar-popover-wrap .ant-popover-inner {
+  background: rgba(12, 16, 23, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.45);
+  color: #e8eef9;
+}
+
+.cesium-toolbar-popover-wrap .ant-popover-arrow::before {
+  background: rgba(12, 16, 23, 0.96);
+}
+
+.cesium-toolbar-popover-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f5f7ff;
+  letter-spacing: 0.02em;
+}
+
+.cesium-toolbar-popover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cesium-terrain-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.cesium-terrain-panel .cesium-toolbar-field {
+  justify-content: space-between;
+}
+
+.cesium-terrain-slider {
+  width: 150px;
+  margin: 0;
+}
+
+.cesium-measure-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 240px;
+}
+
+.cesium-measure-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #cbd5f5;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.cesium-measure-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cesium-measure-toggle.is-active {
+  background: rgba(82, 179, 164, 0.85);
+  color: #0b111a;
+  border-color: rgba(82, 179, 164, 0.9);
+}
+
+.cesium-measure-reset {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5f5;
+}
+
+.cesium-measure-reset:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  color: #f5f7ff !important;
+}
+
+.cesium-toolbar-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f5f7ff;
+}
+
+.cesium-toolbar-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #cbd5f5;
+}
+
+.cesium-toolbar-slider {
+  width: 130px;
+  margin: 0;
+}
+
+.cesium-toolbar .ant-slider {
+  margin: 0;
+}
+
+.cesium-toolbar .ant-slider-rail,
+.cesium-toolbar .ant-slider-track {
+  height: 4px;
+}
+
+.cesium-toolbar .ant-slider-handle {
+  width: 12px;
+  height: 12px;
+  margin-top: -4px;
+  border-width: 2px;
+}
+
+.cesium-toolbar .ant-switch-checked {
+  background: rgba(82, 179, 164, 0.85);
+}
+
+.cesium-toolbar .ant-switch-checked:hover {
+  background: rgba(96, 197, 179, 0.95) !important;
+}
+
+.cesium-toolbar .ant-slider-track {
+  background: rgba(82, 179, 164, 0.8);
+}
+
+.cesium-toolbar .ant-slider-handle::after {
+  box-shadow: 0 0 0 2px rgba(82, 179, 164, 0.35);
+}
+
+.cesium-terrain-panel .ant-switch-checked {
+  background: rgba(82, 179, 164, 0.85);
+}
+
+.cesium-terrain-panel .ant-switch-checked:hover {
+  background: rgba(96, 197, 179, 0.95) !important;
+}
+
+.cesium-terrain-panel .ant-slider-track {
+  background: rgba(82, 179, 164, 0.8);
+}
+
+.cesium-terrain-panel .ant-slider-handle::after {
+  box-shadow: 0 0 0 2px rgba(82, 179, 164, 0.35);
+}
+
+.cesium-viewer-root:fullscreen,
+.cesium-viewer-root:-webkit-full-screen,
+.cesium-viewer-root:-moz-full-screen,
+.cesium-viewer-root:-ms-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: #0b0f15;
+}
+
+.cesium-viewer-root:fullscreen .cesium-viewer,
+.cesium-viewer-root:-webkit-full-screen .cesium-viewer,
+.cesium-viewer-root:-moz-full-screen .cesium-viewer,
+.cesium-viewer-root:-ms-fullscreen .cesium-viewer {
+  width: 100%;
+  height: 100%;
+}

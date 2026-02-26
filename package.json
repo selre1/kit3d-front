@@ -1,0 +1,17 @@
+{
+  "name": "kit3d-front",
+  "private": true,
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "web": "pnpm --filter @kit3d/web... start",
+    "start:web": "pnpm --filter @kit3d/web start",
+    "build:web": "pnpm --filter @kit3d/web build"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": "^10.0.0"
+  },
+  "dependencies": {
+    "pnpm": "^10.28.2"
+  }
+}

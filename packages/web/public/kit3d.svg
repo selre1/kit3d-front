@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00D2FF"/>
+      <stop offset="1" stop-color="#2AF598"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Cube (isometric) -->
+  <path d="M32 10 50 20 32 30 14 20 32 10Z" fill="url(#g)"/>
+  <path d="M14 20v20l18 10V30L14 20Z" fill="#0B1B2B" opacity="0.88"/>
+  <path d="M50 20v20L32 50V30l18-10Z" fill="#0F2F4A" opacity="0.88"/>
+
+</svg>

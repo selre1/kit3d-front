@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 배경(투명) -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 얼굴/귀 실루엣 -->
+    <path
+      d="M22 14
+         C18 7, 23 3, 28 9
+         C30 12, 30 16, 30 18
+         C30 18, 31 17, 32 17
+         C33 17, 34 18, 34 18
+         C34 16, 34 12, 36 9
+         C41 3, 46 7, 42 14
+         C49 18, 52 26, 52 34
+         C52 47, 43 56, 32 56
+         C21 56, 12 47, 12 34
+         C12 26, 15 18, 22 14 Z"
+      fill="#FF5FA2"
+      stroke="#FF5FA2"
+      stroke-width="2"
+    />
+
+    <!-- 눈 (단순 점) -->
+    <circle cx="24.5" cy="34" r="2.3" fill="#FFFFFF" stroke="none"/>
+    <circle cx="39.5" cy="34" r="2.3" fill="#FFFFFF" stroke="none"/>
+
+    <!-- 코/입 -->
+    <path d="M32 37 l3 2.2 a3 3 0 0 1-6 0 Z" fill="#FFFFFF" stroke="none"/>
+    <path d="M32 41 v5" stroke="#FFFFFF" stroke-width="3"/>
+    <path d="M32 46 c-2 2-4 3-7 3" stroke="#FFFFFF" stroke-width="3"/>
+    <path d="M32 46 c 2 2 4 3 7 3" stroke="#FFFFFF" stroke-width="3"/>
+
+    <!-- 볼(귀여움 포인트) -->
+    <circle cx="20" cy="41" r="3.2" fill="#FF86BB" stroke="none" opacity="0.9"/>
+    <circle cx="44" cy="41" r="3.2" fill="#FF86BB" stroke="none" opacity="0.9"/>
+  </g>
+</svg>
