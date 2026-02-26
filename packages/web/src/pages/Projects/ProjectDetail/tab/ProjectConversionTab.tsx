@@ -643,11 +643,9 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
                   URL 생성
                 </Button>
                 {showTilesetUrl ? (
-                  <Input
-                    value={tilesetRequestUrl}
-                    readOnly
-                    placeholder="타일셋이 없습니다."
-                  />
+                  <Typography.Text copyable>
+                    {tilesetRequestUrl || "타일셋이 없습니다."}
+                  </Typography.Text>
                 ) : null}
               </Flex>
             </Descriptions.Item>
