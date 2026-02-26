@@ -643,7 +643,7 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
                   URL 생성
                 </Button>
                 {showTilesetUrl ? (
-                  <Typography.Text copyable>
+                  <Typography.Text keyboard copyable style={{ marginTop: 8 }}>
                     {tilesetRequestUrl || "타일셋이 없습니다."}
                   </Typography.Text>
                 ) : null}
