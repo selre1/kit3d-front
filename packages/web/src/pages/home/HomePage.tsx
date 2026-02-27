@@ -132,7 +132,7 @@ export function HomaPage() {
 
   return (
     <Flex vertical gap={12} className="dashboard-page">
-      <div className="page-title">최근 활동 보기</div>
+      <div className="page-title">최근 활동</div>
       {error ? <Alert type="error" showIcon message={error} /> : null}
 
       {loading ? (
