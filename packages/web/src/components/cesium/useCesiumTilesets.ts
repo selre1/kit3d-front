@@ -76,6 +76,14 @@ export function useCesiumTilesets({ viewer, urls }: UseCesiumTilesetsOptions) {
         }
 
         tileset.style = new Cesium3DTileStyle({
+          color: {
+              conditions: [
+                  ["${ifc_class} === 'IfcWall'", "color('#bababa')"],
+                  ["${ifc_class} === 'IfcSlab'", "color('#bababa')"],
+                  ["${ifc_class} === 'IfcWallStandardCase'", "color('#bababa')"],
+                  ["${ifc_class} === 'IfcOpeningElement'", "color('#bababa')"],
+              ]
+          },
           show: "${ifc_class} !== 'IfcOpeningElement'",
         });
 

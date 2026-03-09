@@ -139,10 +139,14 @@
   height: 14px;
 }
 
+.cesium-measure-toggle:not(.is-active):hover {
+  background: transparent !important;
+}
+
 .cesium-measure-toggle.is-active {
-  background: rgba(82, 179, 164, 0.85);
+  background: rgba(74, 163, 255, 0.88);
   color: #0b111a;
-  border-color: rgba(82, 179, 164, 0.9);
+  border-color: rgba(102, 179, 255, 0.95);
 }
 
 .cesium-measure-reset {
@@ -193,35 +197,35 @@
 }
 
 .cesium-toolbar .ant-switch-checked {
-  background: rgba(82, 179, 164, 0.85);
+  background: rgba(74, 163, 255, 0.88);
 }
 
 .cesium-toolbar .ant-switch-checked:hover {
-  background: rgba(96, 197, 179, 0.95) !important;
+  background: rgba(102, 179, 255, 0.96) !important;
 }
 
 .cesium-toolbar .ant-slider-track {
-  background: rgba(82, 179, 164, 0.8);
+  background: rgba(74, 163, 255, 0.82);
 }
 
 .cesium-toolbar .ant-slider-handle::after {
-  box-shadow: 0 0 0 2px rgba(82, 179, 164, 0.35);
+  box-shadow: 0 0 0 2px rgba(74, 163, 255, 0.4);
 }
 
 .cesium-terrain-panel .ant-switch-checked {
-  background: rgba(82, 179, 164, 0.85);
+  background: rgba(74, 163, 255, 0.88);
 }
 
 .cesium-terrain-panel .ant-switch-checked:hover {
-  background: rgba(96, 197, 179, 0.95) !important;
+  background: rgba(102, 179, 255, 0.96) !important;
 }
 
 .cesium-terrain-panel .ant-slider-track {
-  background: rgba(82, 179, 164, 0.8);
+  background: rgba(74, 163, 255, 0.82);
 }
 
 .cesium-terrain-panel .ant-slider-handle::after {
-  box-shadow: 0 0 0 2px rgba(82, 179, 164, 0.35);
+  box-shadow: 0 0 0 2px rgba(74, 163, 255, 0.4);
 }
 
 .cesium-viewer-root:fullscreen,
@@ -243,3 +247,4 @@
   width: 100%;
   height: 100%;
 }
+
