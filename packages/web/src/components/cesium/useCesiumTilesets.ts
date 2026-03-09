@@ -3,6 +3,7 @@ import { Cesium3DTileset, Cesium3DTileStyle, ShadowMode } from "cesium";
 import type { Viewer } from "cesium";
 import { applyTilesetBounds } from "./useCesiumUtility";
 import { fitCameraToTilesets } from "./useCameraMovement";
+import { color } from "three/tsl";
 
 type UseCesiumTilesetsOptions = {
   viewer: Viewer | null;
@@ -75,6 +76,7 @@ export function useCesiumTilesets({ viewer, urls }: UseCesiumTilesetsOptions) {
         }
 
         tileset.style = new Cesium3DTileStyle({
+          color: "color('cyan')",
           show: "${ifc_class} !== 'IfcOpeningElement'",
         });
 
