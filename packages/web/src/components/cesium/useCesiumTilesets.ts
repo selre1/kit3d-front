@@ -76,7 +76,12 @@ export function useCesiumTilesets({ viewer, urls }: UseCesiumTilesetsOptions) {
         }
 
         tileset.style = new Cesium3DTileStyle({
-          color: "color('cyan')",
+          color: {
+            conditions: [
+              ["${color} !== null", "color(${color})"],
+              ["true", "color('gray')"]
+            ]
+          },
           show: "${ifc_class} !== 'IfcOpeningElement'",
         });
 
