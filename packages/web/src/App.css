@@ -966,3 +966,49 @@
   background: linear-gradient(180deg, #3b82f6, #0ea5e9);
   border-radius: 999px;
 }
+
+/* Primary Color Unification (Ant Token) */
+:root {
+  --primary-color: var(--ant-color-primary, #1677ff);
+  --primary-color-hover: var(--ant-color-primary-hover, #4096ff);
+}
+
+.brand-dot {
+  background: var(--primary-color);
+  box-shadow: 0 0 12px rgba(22, 119, 255, 0.55);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+
+.page .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab-active {
+  background: rgba(22, 119, 255, 0.2);
+  background: color-mix(in srgb, var(--primary-color) 20%, transparent);
+  border-color: rgba(22, 119, 255, 0.55);
+  border-color: color-mix(in srgb, var(--primary-color) 55%, transparent);
+}
+
+.models-table-grid .ant-table-tbody > tr.is-active > td {
+  background: rgba(22, 119, 255, 0.12);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+#inspector_list_container::-webkit-scrollbar-thumb,
+.conversion-tree-body::-webkit-scrollbar-thumb,
+.import-upload-modal .ant-upload-wrapper .ant-upload-list::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+}
+
+#inspector_list_container::-webkit-scrollbar-thumb:hover,
+.conversion-tree-body::-webkit-scrollbar-thumb:hover,
+.import-upload-modal .ant-upload-wrapper .ant-upload-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color-hover);
+}
+
+.inspect_section_header,
+.inspect_section_toggle {
+  color: var(--primary-color);
+}
+
+.inspect_section_header:hover {
+  background: rgba(22, 119, 255, 0.18);
+  background: color-mix(in srgb, var(--primary-color) 18%, transparent);
+}

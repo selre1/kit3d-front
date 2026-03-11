@@ -12,8 +12,6 @@ createRoot(document.getElementById("root")!).render(
       theme={{
         algorithm: theme.darkAlgorithm,
         token: {
-          colorPrimary: "#4382ff",
-          colorInfo: "#4382ff",
           colorBgBase: "#070d16",
           colorText: "#e7edf9",
           colorTextSecondary: "#96a5bd",
@@ -28,4 +26,3 @@ createRoot(document.getElementById("root")!).render(
     </ConfigProvider>
   </StrictMode>
 );
-

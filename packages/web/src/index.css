@@ -15,7 +15,7 @@
   --surface-elevated: #191f2e;
   --text-primary: #e9eef8;
   --text-muted: #9aa6bf;
-  --accent: #4cc9f0;
+  --accent: var(--ant-color-primary, #1677ff);
 }
 
 * {
@@ -49,7 +49,7 @@ a {
   --surface-elevated: #111a28;
   --text-primary: #e7edf9;
   --text-muted: #96a5bd;
-  --accent: #4382ff;
+  --accent: var(--ant-color-primary, #1677ff);
   --line-soft: rgba(146, 164, 194, 0.2);
   --line-strong: rgba(166, 185, 219, 0.32);
 }
@@ -160,7 +160,7 @@ body {
 }
 
 .page .ant-tabs .ant-tabs-ink-bar {
-  background: #4382ff;
+  background: var(--ant-color-primary, #1677ff);
 }
 
 .models-table,
@@ -194,7 +194,8 @@ body {
 }
 
 .models-table-grid .ant-table-tbody > tr.is-active > td {
-  background: rgba(29, 123, 255, 0.12);
+  background: rgba(22, 119, 255, 0.12);
+  background: color-mix(in srgb, var(--ant-color-primary, #1677ff) 12%, transparent);
 }
 
 .ant-btn {
@@ -204,15 +205,15 @@ body {
 }
 
 .ant-btn-primary {
-  background: #4382ff;
-  border-color: #4382ff;
+  background: var(--ant-color-primary, #1677ff);
+  border-color: var(--ant-color-primary, #1677ff);
   box-shadow: none;
 }
 
 .ant-btn-primary:hover,
 .ant-btn-primary:focus-visible {
-  background: #5a95ff !important;
-  border-color: #5a95ff !important;
+  background: var(--ant-color-primary-hover, #4096ff) !important;
+  border-color: var(--ant-color-primary-hover, #4096ff) !important;
 }
 
 .ant-btn-default,
@@ -257,4 +258,5 @@ body {
   font-size: 13px;
   font-weight: 500;
 }
+
 
