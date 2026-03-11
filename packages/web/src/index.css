@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
+﻿@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap");
 
 :root {
   font-family: "Space Grotesk", "JetBrains Mono", sans-serif;
@@ -49,7 +49,7 @@ a {
   --surface-elevated: #111a28;
   --text-primary: #e7edf9;
   --text-muted: #96a5bd;
-  --accent: #1d7bff;
+  --accent: #4382ff;
   --line-soft: rgba(146, 164, 194, 0.2);
   --line-strong: rgba(166, 185, 219, 0.32);
 }
@@ -160,7 +160,7 @@ body {
 }
 
 .page .ant-tabs .ant-tabs-ink-bar {
-  background: #1d7bff;
+  background: #4382ff;
 }
 
 .models-table,
@@ -204,15 +204,15 @@ body {
 }
 
 .ant-btn-primary {
-  background: #1d7bff;
-  border-color: #1d7bff;
+  background: #4382ff;
+  border-color: #4382ff;
   box-shadow: none;
 }
 
 .ant-btn-primary:hover,
 .ant-btn-primary:focus-visible {
-  background: #368cff !important;
-  border-color: #368cff !important;
+  background: #5a95ff !important;
+  border-color: #5a95ff !important;
 }
 
 .ant-btn-default,
@@ -257,3 +257,4 @@ body {
   font-size: 13px;
   font-weight: 500;
 }
+

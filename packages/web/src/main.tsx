@@ -12,8 +12,8 @@ createRoot(document.getElementById("root")!).render(
       theme={{
         algorithm: theme.darkAlgorithm,
         token: {
-          colorPrimary: "#1d7bff",
-          colorInfo: "#1d7bff",
+          colorPrimary: "#4382ff",
+          colorInfo: "#4382ff",
           colorBgBase: "#070d16",
           colorText: "#e7edf9",
           colorTextSecondary: "#96a5bd",
