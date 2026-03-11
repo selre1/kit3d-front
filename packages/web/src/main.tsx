@@ -11,15 +11,6 @@ createRoot(document.getElementById("root")!).render(
     <ConfigProvider
       theme={{
         algorithm: theme.darkAlgorithm,
-        token: {
-          colorBgBase: "#070d16",
-          colorText: "#e7edf9",
-          colorTextSecondary: "#96a5bd",
-          fontFamily:
-            '"Segoe UI", "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif',
-          fontSize: 14,
-          borderRadius: 8,
-        },
       }}
     >
       <App />
