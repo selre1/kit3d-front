@@ -1,4 +1,4 @@
-.cesium-viewer-shell {
+﻿.cesium-viewer-shell {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -121,6 +121,11 @@
   align-items: center;
   gap: 6px;
   min-width: 240px;
+}
+
+.cesium-measure-panel .ant-btn {
+  font-size: 11px;
+  font-weight: 400;
 }
 
 .cesium-measure-toggle {
@@ -247,4 +252,5 @@
   width: 100%;
   height: 100%;
 }
+
 

@@ -932,3 +932,37 @@
     height: auto;
   }
 }
+
+/* import-upload modal scroll */
+.import-upload-modal .ant-modal-body {
+  max-height: min(72vh, 700px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.import-upload-modal .ant-upload-wrapper {
+  min-height: 0;
+}
+
+.import-upload-modal .ant-upload-wrapper .ant-upload-list {
+  max-height: min(32vh, 260px);
+  overflow-y: auto;
+  margin-top: 10px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+.import-upload-modal .ant-upload-wrapper .ant-upload-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.import-upload-modal .ant-upload-wrapper .ant-upload-list::-webkit-scrollbar-track {
+  background: rgba(8, 12, 18, 0.9);
+  border-radius: 999px;
+}
+
+.import-upload-modal .ant-upload-wrapper .ant-upload-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #3b82f6, #0ea5e9);
+  border-radius: 999px;
+}

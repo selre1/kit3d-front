@@ -116,7 +116,8 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
         ) : null}
       </div>
       <Modal
-        title="업로드"
+                className="import-upload-modal"
+        title="\uC5C5\uB85C\uB4DC"
         open={uploadOpen}
         onCancel={() => {
           setUploadOpen(false);
