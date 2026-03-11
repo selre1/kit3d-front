@@ -233,12 +233,6 @@ export function ProjectsPage() {
                         flexWrap: "wrap",
                       }}
                     >
-                      <Tag color="success" icon={<CheckCircleOutlined />} variant="solid">
-                        IFC
-                      </Tag>
-                      <Tag color="geekblue" variant="solid">
-                        3DTiles
-                      </Tag>
                     </div>
                   </div>
                 )}
