@@ -10,6 +10,7 @@ import {
   Flex,
   Layout,
   Modal,
+  Progress,
   Spin,
   Table,
   Tag,
@@ -93,6 +94,7 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedTile, setSelectedTile] = useState<TileItem | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadProgressById, setDownloadProgressById] = useState<Record<string, number | null>>({});
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -180,16 +182,76 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
 
   const handleDownload = async (event: MouseEvent<HTMLElement>, record: TileItem) => {
     event.stopPropagation();
-    if (!record?.tile_job_id) return;
-    if (downloadingId === record.tile_job_id) return;
-    setDownloadingId(record.tile_job_id);
+    const jobId = record?.tile_job_id;
+    if (!jobId) return;
+    if (downloadingId === jobId) return;
+
+    setDownloadingId(jobId);
+    setDownloadProgressById((current) => ({ ...current, [jobId]: null }));
+
     try {
-      const response = await fetch(`/api/v1/tile/${projectId}/${record.tile_job_id}/download`);
+      const response = await fetch(`/api/v1/tile/${projectId}/${jobId}/download`);
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
-      const blob = await response.blob();
-      const filename = "tiles.zip";
+
+      const totalBytesHeader = response.headers.get("content-length");
+      const totalBytes = totalBytesHeader ? Number(totalBytesHeader) : NaN;
+      const hasTotalBytes = Number.isFinite(totalBytes) && totalBytes > 0;
+
+      let filename = "tiles.zip";
+      const disposition = response.headers.get("content-disposition");
+      const filenameMatch = disposition?.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+      const rawFilename = filenameMatch?.[1] ?? filenameMatch?.[2];
+      if (rawFilename) {
+        try {
+          filename = decodeURIComponent(rawFilename);
+        } catch {
+          filename = rawFilename;
+        }
+      }
+
+      let blob: Blob;
+      if (response.body) {
+        const reader = response.body.getReader();
+        const chunks: BlobPart[] = [];
+        let downloadedBytes = 0;
+        let lastPercent = -1;
+
+        if (hasTotalBytes) {
+          setDownloadProgressById((current) => ({ ...current, [jobId]: 0 }));
+        }
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (!value) continue;
+
+          const chunk = new Uint8Array(value.byteLength);
+          chunk.set(value);
+          chunks.push(chunk);
+          downloadedBytes += value.length;
+
+          if (hasTotalBytes) {
+            const percent = Math.min(99, Math.round((downloadedBytes / totalBytes) * 100));
+            if (percent !== lastPercent) {
+              lastPercent = percent;
+              setDownloadProgressById((current) => ({ ...current, [jobId]: percent }));
+            }
+          }
+        }
+
+        blob = new Blob(chunks, {
+          type: response.headers.get("content-type") ?? "application/zip",
+        });
+      } else {
+        blob = await response.blob();
+      }
+
+      if (hasTotalBytes) {
+        setDownloadProgressById((current) => ({ ...current, [jobId]: 100 }));
+      }
+
       const url = window.URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -199,9 +261,17 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
       anchor.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      message.error("다운로드에 실패했습니다.");
+      message.error("\uB2E4\uC6B4\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.");
     } finally {
-      setDownloadingId((current) => (current === record.tile_job_id ? null : current));
+      setDownloadingId((current) => (current === jobId ? null : current));
+      setDownloadProgressById((current) => {
+        if (!(jobId in current)) {
+          return current;
+        }
+        const next = { ...current };
+        delete next[jobId];
+        return next;
+      });
     }
   }
 
@@ -312,16 +382,36 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
         key: "download",
         align: "center",
         render: (_, record) => {
+          const isDownloading = downloadingId === record.tile_job_id;
+          const progressValue = record.tile_job_id
+            ? downloadProgressById[record.tile_job_id]
+            : null;
+
           return (
-            <Button
-              size="small"
-              shape="circle"
-              icon={<CloudDownloadOutlined />}
-              loading={downloadingId === record.tile_job_id}
-              disabled={!record.tile_job_id || record.status?.toUpperCase() !== "DONE"}
-              onClick={(event) => handleDownload(event, record)}
-              aria-label="Download tile"
-            />
+            <Flex vertical align="center" gap={4}>
+              <Button
+                size="small"
+                shape="circle"
+                icon={<CloudDownloadOutlined />}
+                loading={isDownloading}
+                disabled={!record.tile_job_id || record.status?.toUpperCase() !== "DONE"}
+                onClick={(event) => handleDownload(event, record)}
+                aria-label="Download tile"
+              />
+              {isDownloading ? (
+                typeof progressValue === "number" ? (
+                  <Progress
+                    percent={progressValue}
+                    size="small"
+                    showInfo={false}
+                    status="active"
+                    style={{ width: 56, margin: 0 }}
+                  />
+                ) : (
+                  <Spin size="small" />
+                )
+              ) : null}
+            </Flex>
           );
         },
       },
@@ -346,7 +436,7 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
         },
       },
     ],
-    [downloadingId, projectId]
+    [downloadingId, downloadProgressById, projectId]
   );
   const fetchStatus = () => {
     if (!projectId) return;
