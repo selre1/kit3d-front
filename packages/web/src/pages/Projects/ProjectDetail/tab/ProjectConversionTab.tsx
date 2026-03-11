@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import {
   Alert,
@@ -184,14 +184,20 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
     if (downloadingId === record.tile_job_id) return;
     setDownloadingId(record.tile_job_id);
     try {
-      const url = `/api/v1/tile/${projectId}/${record.tile_job_id}/download`;
-      const anchor = document.createElement("a");
+      const response = await fetch(`/api/v1/tile/${projectId}/${record.tile_job_id}/download`);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      const blob = await response.blob();
       const filename = "tiles.zip";
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
       anchor.href = url;
       anchor.download = filename;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       message.error("다운로드에 실패했습니다.");
     } finally {
