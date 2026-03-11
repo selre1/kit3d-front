@@ -36,3 +36,224 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* ===== Reference Typography Calibration ===== */
+:root {
+  font-family: "Segoe UI", "Pretendard Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  line-height: 1.45;
+  font-weight: 500;
+  color: #e7edf9;
+  background-color: #070d16;
+
+  --surface: #0d141f;
+  --surface-elevated: #111a28;
+  --text-primary: #e7edf9;
+  --text-muted: #96a5bd;
+  --accent: #1d7bff;
+  --line-soft: rgba(146, 164, 194, 0.2);
+  --line-strong: rgba(166, 185, 219, 0.32);
+}
+
+body {
+  background:
+    radial-gradient(1000px 600px at 56% -25%, rgba(63, 98, 156, 0.23) 0%, rgba(9, 14, 23, 0) 68%),
+    linear-gradient(180deg, #070d16 0%, #060b13 55%, #050a12 100%);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.app-shell,
+.ant-layout,
+.ant-typography,
+.ant-btn,
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select,
+.ant-table,
+.ant-menu,
+.ant-breadcrumb,
+.ant-tabs,
+.ant-tag,
+.ant-modal,
+.ant-descriptions,
+.ant-form,
+.ant-alert,
+.ant-empty {
+  font-family: inherit;
+}
+
+.ant-typography {
+  color: var(--text-primary);
+}
+
+.ant-typography-secondary,
+.page-subtitle,
+.project-owner,
+.conversion-viewer-placeholder,
+.ifc-viewer-placeholder {
+  color: var(--text-muted) !important;
+}
+
+.app-sider {
+  background: linear-gradient(180deg, #080f18 0%, #070d15 100%);
+  border-right: 1px solid var(--line-soft);
+}
+
+.app-header {
+  background: rgba(10, 16, 25, 0.96);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.brand {
+  color: #f4f7ff;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.header-title,
+.header-breadcrumb .ant-breadcrumb-link,
+.header-breadcrumb .ant-breadcrumb-link a,
+.header-breadcrumb .ant-breadcrumb-separator {
+  font-size: 14px;
+  font-weight: 500;
+  color: #b8c4d8;
+}
+
+.page-title {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f5f8ff;
+}
+
+.page-subtitle {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.app-sider .ant-menu-item,
+.app-sider .ant-menu-submenu-title {
+  height: 40px;
+  line-height: 40px;
+  margin-inline: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #c3cedf;
+}
+
+.app-sider .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #f5f8ff !important;
+  font-weight: 600;
+}
+
+.page .ant-tabs .ant-tabs-tab-btn {
+  font-size: 14px;
+  font-weight: 600;
+  color: #aab8cd;
+}
+
+.page .ant-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #eff4ff;
+}
+
+.page .ant-tabs .ant-tabs-ink-bar {
+  background: #1d7bff;
+}
+
+.models-table,
+.models-detail,
+.project-card {
+  background: linear-gradient(180deg, rgba(17, 24, 37, 0.88), rgba(12, 18, 28, 0.88));
+  border: 1px solid var(--line-soft);
+  box-shadow: none;
+}
+
+.models-table-title,
+.models-detail-title,
+.conversion-tree-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #edf3ff;
+}
+
+.models-table-grid .ant-table-thead > tr > th {
+  font-size: 12px;
+  font-weight: 600;
+  color: #94a5c0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.models-table-grid .ant-table-tbody > tr > td {
+  font-size: 14px;
+  font-weight: 500;
+  color: #dbe4f3;
+  border-bottom: 1px solid rgba(146, 164, 194, 0.16);
+}
+
+.models-table-grid .ant-table-tbody > tr.is-active > td {
+  background: rgba(29, 123, 255, 0.12);
+}
+
+.ant-btn {
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.ant-btn-primary {
+  background: #1d7bff;
+  border-color: #1d7bff;
+  box-shadow: none;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus-visible {
+  background: #368cff !important;
+  border-color: #368cff !important;
+}
+
+.ant-btn-default,
+.ant-btn-color-default {
+  color: #d9e3f4;
+  border-color: var(--line-soft);
+  background: rgba(13, 20, 31, 0.75);
+}
+
+.ant-input,
+.ant-input-affix-wrapper,
+.ant-select .ant-select-selector,
+.ant-input-number,
+.ant-picker,
+.ant-picker .ant-picker-input > input {
+  color: #dce6f6 !important;
+  background: rgba(17, 24, 36, 0.82) !important;
+  border-color: var(--line-soft) !important;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ant-input::placeholder,
+.ant-picker-input > input::placeholder,
+.ant-select-selection-placeholder {
+  color: #7f90ab !important;
+}
+
+.ant-tag {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ant-descriptions-item-label {
+  color: #9fb0cb !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ant-descriptions-item-content {
+  color: #e1e9f8 !important;
+  font-size: 13px;
+  font-weight: 500;
+}
