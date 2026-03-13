@@ -1,9 +1,11 @@
-import { Layout, Menu } from "antd";
-import { HomeOutlined, ProjectOutlined, SettingOutlined } from "@ant-design/icons";
+﻿import { Layout, Menu } from "antd";
+import {
+  EnvironmentOutlined,
+  HomeOutlined,
+  ProjectOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { useState } from "react";
-
-//verbatimModuleSyntax 옵션이 켜져 있으면 타입과 값 import를 엄격히 분리
-//ReactNode는 타입만 존재
 import type { ReactNode } from "react";
 
 const { Header, Sider, Content } = Layout;
@@ -13,6 +15,7 @@ type AppShellProps = {
   activeMenu: string;
   onMenuChange: (key: string) => void;
   headerTitle?: ReactNode;
+  contentClassName?: string;
 };
 
 export function AppShell({
@@ -20,6 +23,7 @@ export function AppShell({
   activeMenu,
   onMenuChange,
   headerTitle,
+  contentClassName,
 }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -45,7 +49,8 @@ export function AppShell({
           inlineCollapsed={collapsed}
           items={[
             { key: "home", label: "홈", icon: <HomeOutlined /> },
-            { key: "projects", label: "프로젝트", icon: <ProjectOutlined /> },
+            { key: "projects", label: "3D 모델", icon: <ProjectOutlined /> },
+            { key: "dem", label: "지형", icon: <EnvironmentOutlined /> },
             { key: "settings", label: "설정", icon: <SettingOutlined /> },
           ]}
         />
@@ -53,18 +58,10 @@ export function AppShell({
 
       <Layout>
         <Header className="app-header">
-          <div className="header-title">
-            {headerTitle}
-          </div>
-          {/* <div className="header-actions">
-            <Badge dot>
-              <Button type="text">Notifications</Button>
-            </Badge>
-            <Avatar size="small">B</Avatar>
-          </div> */}
+          <div className="header-title">{headerTitle}</div>
         </Header>
 
-        <Content className="page">{children}</Content>
+        <Content className={contentClassName || "page"}>{children}</Content>
       </Layout>
     </Layout>
   );

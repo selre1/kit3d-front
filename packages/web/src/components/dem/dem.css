@@ -1,0 +1,414 @@
+﻿.dem-page-full {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dem-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #bfbfbf;
+}
+
+.dem-three-viewport {
+  position: absolute;
+  inset: 0;
+}
+
+.dem-three-viewport canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.dem-sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 352px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(9, 13, 22, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  z-index: 5;
+  transition: width 0.2s ease;
+}
+
+.dem-sidebar.is-collapsed {
+  width: 60px;
+}
+
+.dem-sidebar-toggle-handle {
+  position: absolute;
+  right: -13px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 54px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  background: rgba(10, 14, 22, 0.95);
+  color: #dbe4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 7;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dem-sidebar-toggle-handle:hover {
+  color: #ffffff;
+  background: rgba(18, 24, 36, 0.98);
+}
+
+.dem-sidebar-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 8px;
+}
+
+.dem-sidebar-headline {
+  min-width: 0;
+}
+
+.dem-sidebar-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #f3f6ff;
+  white-space: nowrap;
+}
+
+.dem-sidebar-subtitle {
+  margin-top: 2px;
+  color: #93a0ba;
+  font-size: 12px;
+}
+
+.dem-sidebar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dem-sidebar-actions .ant-btn {
+  color: #dbe4f6;
+}
+
+.dem-sidebar-actions .ant-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dem-sidebar.is-collapsed .dem-sidebar-headline {
+  display: none;
+}
+
+.dem-sidebar.is-collapsed .dem-sidebar-header {
+  justify-content: center;
+  padding: 8px 4px;
+}
+
+.dem-sidebar.is-collapsed .dem-sidebar-actions {
+  flex-direction: column;
+}
+
+.dem-sidebar-body {
+  padding: 10px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  flex: 1;
+}
+
+.dem-sidebar.is-collapsed .dem-sidebar-body {
+  padding: 8px 6px;
+}
+
+.dem-list-empty {
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(10, 14, 24, 0.6);
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dem-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dem-list-compact-item {
+  width: 100%;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(14, 19, 30, 0.82);
+  color: #dbe8ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dem-list-compact-item:hover {
+  border-color: rgba(70, 146, 255, 0.6);
+}
+
+.dem-list-compact-item.is-active {
+  border-color: color-mix(in srgb, var(--primary-color) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 45%, transparent);
+}
+
+.dem-list-item {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(14, 19, 30, 0.82);
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dem-list-item:hover {
+  border-color: rgba(70, 146, 255, 0.6);
+}
+
+.dem-list-item.is-active {
+  border-color: color-mix(in srgb, var(--primary-color) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary-color) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+.dem-list-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #1971d6 0%, #2443dc 100%);
+  color: #dbe8ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  font-size: 18px;
+}
+
+.dem-list-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dem-list-head {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dem-list-more.ant-btn {
+  color: #9fb2d6;
+  margin-left: auto;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dem-list-more.ant-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dem-list-name {
+  min-width: 0;
+  flex: 1;
+  color: #f4f7ff;
+  font-weight: 600;
+  line-height: 1.35;
+  word-break: break-all;
+}
+
+.dem-list-meta {
+  color: #9aa6bf;
+  font-size: 12px;
+}
+
+.dem-list-item .ant-tag {
+  margin-inline-end: 0;
+  width: fit-content;
+}
+
+.dem-sidebar-tree {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 14px 14px;
+}
+
+.dem-tree-title {
+  color: #e5ecfb;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.dem-sidebar-tree ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #92a1bc;
+}
+
+.dem-upload-modal .ant-modal-content {
+  background: #0a101a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+
+.dem-upload-modal .ant-modal-header {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dem-upload-modal .ant-modal-title,
+.dem-upload-modal .ant-modal-close,
+.dem-upload-modal .ant-tabs-tab,
+.dem-upload-modal .ant-upload-text,
+.dem-upload-modal .ant-upload-hint {
+  color: #e8eefc;
+}
+
+.dem-upload-modal .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #4f9dff !important;
+}
+
+.dem-upload-modal .ant-input {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.16);
+  color: #dce6f8;
+}
+
+.dem-upload-modal .ant-upload-wrapper .ant-upload-drag {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dem-upload-section {
+  padding-top: 8px;
+}
+
+@media (max-width: 1200px) {
+  .dem-sidebar {
+    width: 312px;
+  }
+
+  .dem-sidebar.is-collapsed {
+    width: 56px;
+  }
+}
+
+@media (max-width: 900px) {
+  .dem-sidebar,
+  .dem-sidebar.is-collapsed {
+    width: 100%;
+    max-height: 64%;
+    min-height: 320px;
+    top: auto;
+    border-right: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .dem-sidebar-header {
+    align-items: center;
+  }
+
+  .dem-sidebar-toggle-handle {
+    left: 50%;
+    right: auto;
+    top: -24px;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 24px;
+    border-left: 1px solid rgba(255, 255, 255, 0.16);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .dem-sidebar-body {
+    padding: 12px 10px;
+  }
+
+  .dem-sidebar-tree {
+    display: none;
+  }
+
+  .dem-sidebar.is-collapsed {
+    max-height: 64px;
+    min-height: 64px;
+  }
+
+  .dem-sidebar.is-collapsed .dem-sidebar-header {
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+
+  .dem-sidebar.is-collapsed .dem-sidebar-actions {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .dem-sidebar.is-collapsed .dem-sidebar-actions .ant-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .dem-sidebar.is-collapsed .dem-sidebar-body {
+    display: none;
+  }
+}
+
+.dem-item-dropdown .ant-dropdown-menu {
+  background: rgba(14, 19, 30, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  min-width: 180px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.dem-item-dropdown .ant-dropdown-menu-item {
+  color: #e8eefc;
+}
+
+.dem-item-dropdown .ant-dropdown-menu-item:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.dem-item-dropdown .ant-dropdown-menu-item-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
