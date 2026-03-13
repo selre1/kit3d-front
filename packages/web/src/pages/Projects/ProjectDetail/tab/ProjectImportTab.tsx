@@ -4,7 +4,7 @@ import type { UploadFile } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 
 import { apiPost } from "../../../../tools/api";
-import type { ImportJobItem } from "../../../../types/project";
+import type { ImportJobItem, ImportUploadResponse } from "../../../../types/project";
 import { ProjectModelsList } from "./import/ProjectModelsList";
 
 type ProjectImportTabProps = {
@@ -19,6 +19,12 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
   const [uploadPercent, setUploadPercent] = useState(0);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const getSkipReasonLabel = (reason?: string) => {
+    if (reason === "duplicate_file_name") {
+      return "duplicate file name";
+    }
+    return reason || "unknown";
+  };
 
   const handleRestartImport = (item: ImportJobItem) => {
     const jobId = item.job_id;
@@ -73,8 +79,30 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
       }
     };
     xhr.onload = () => {
+      let response: ImportUploadResponse | null = null;
+      try {
+        response = JSON.parse(xhr.responseText) as ImportUploadResponse;
+      } catch {
+        response = null;
+      }
+
       if (xhr.status >= 200 && xhr.status < 300) {
-        message.success("Upload complete.");
+        const skipped = response?.skipped ?? [];
+        const uploadedCount = response?.uploaded?.length ?? response?.items?.length ?? 0;
+
+        if (skipped.length > 0) {
+          const preview = skipped
+            .slice(0, 5)
+            .map((item) => `${item.file_name} (${getSkipReasonLabel(item.reason)})`)
+            .join(", ");
+          const suffix = skipped.length > 5 ? ` +${skipped.length - 5} more` : "";
+          message.warning(
+            `Uploaded ${uploadedCount}, skipped ${skipped.length}: ${preview}${suffix}`
+          );
+        } else {
+          message.success("Upload complete.");
+        }
+
         setRefreshKey((prev) => prev + 1);
         setUploadOpen(false);
         resetUploadState();
