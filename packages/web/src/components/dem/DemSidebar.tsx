@@ -8,7 +8,7 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SyncOutlined,
+  TrademarkOutlined ,
 } from "@ant-design/icons";
 import { Button, Dropdown, Empty, Tag } from "antd";
 import type { MenuProps } from "antd";
@@ -152,7 +152,7 @@ export function DemSidebar({
             size="small"
             type="text"
             className={`dem-rotate-btn ${rotating ? "is-active" : ""}`}
-            icon={<SyncOutlined spin={rotating} />}
+            icon={<TrademarkOutlined spin={rotating} />}
             onClick={onToggleRotate}
             aria-label={rotating ? "회전 멈춤" : "회전 시작"}
           />

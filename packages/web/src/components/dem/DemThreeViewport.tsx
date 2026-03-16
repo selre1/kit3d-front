@@ -186,8 +186,6 @@ export function DemThreeViewport({
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setClearColor(0xd3d3d3);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMappingExposure = 1.1;
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
@@ -200,16 +198,9 @@ export function DemThreeViewport({
     controls.autoRotate = autoRotate;
     controlsRef.current = controls;
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    keyLight.position.set(500, 1000, 250);
-    scene.add(keyLight);
-
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.55);
-    fillLight.position.set(-420, 720, -260);
-    scene.add(fillLight);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.28);
-    scene.add(ambientLight);
+    const light = new THREE.DirectionalLight(0xffffff);
+    light.position.set(500, 1000, 250);
+    scene.add(light);
 
     const gridHelper = new THREE.GridHelper(1000, 40);
     scene.add(gridHelper);
@@ -314,7 +305,7 @@ export function DemThreeViewport({
   return (
     <div className="dem-three-viewport">
       <div ref={containerRef} className="dem-three-canvas" />
-      {loading ? <div className="dem-three-status">Generating 3D Model ...</div> : null}
+      {loading ? <div className="dem-three-status">지형 렌더링 중...</div> : null}
       {viewerError ? <div className="dem-three-error">{viewerError}</div> : null}
     </div>
   );
