@@ -1,14 +1,18 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import type { DemViewerSource } from "./types";
+import { buildLineProfile, type DemGridData, type DemLocalPoint } from "./profile";
+import type { DemProfileResult, DemViewerSource } from "./types";
 
 type DemViewportProps = {
   seedKey?: string | null;
   source?: DemViewerSource | null;
   autoRotate?: boolean;
+  profileEnabled?: boolean;
+  profileResetKey?: number;
   onMetaChange?: (meta: string | null) => void;
+  onProfileChange?: (profile: DemProfileResult | null) => void;
 };
 
 type DemWorkerSuccess = {
@@ -19,6 +23,7 @@ type DemWorkerSuccess = {
   sourceHeight: number;
   minElevation: number;
   maxElevation: number;
+  elevations: ArrayBuffer;
   zValues: ArrayBuffer;
   colors: ArrayBuffer;
 };
@@ -30,10 +35,26 @@ type DemWorkerFailure = {
 
 type DemWorkerResponse = DemWorkerSuccess | DemWorkerFailure;
 
+type DemProfilePick = {
+  world: THREE.Vector3;
+  local: DemLocalPoint;
+};
+
 function disposeMesh(mesh: THREE.Mesh | null) {
   if (!mesh) return;
   mesh.geometry.dispose();
   const material = mesh.material;
+  if (Array.isArray(material)) {
+    material.forEach((item) => item.dispose());
+  } else {
+    material.dispose();
+  }
+}
+
+function disposeLine(line: THREE.Line | null) {
+  if (!line) return;
+  line.geometry.dispose();
+  const material = line.material;
   if (Array.isArray(material)) {
     material.forEach((item) => item.dispose());
   } else {
@@ -82,6 +103,39 @@ function formatElevation(value: number) {
   if (abs >= 1000) return value.toFixed(0);
   if (abs >= 100) return value.toFixed(1);
   return value.toFixed(2);
+}
+
+function updateProfileLine(
+  scene: THREE.Scene | null,
+  lineRef: MutableRefObject<THREE.Line | null>,
+  start: THREE.Vector3,
+  end: THREE.Vector3
+) {
+  if (!scene) return;
+
+  if (!lineRef.current) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute([start.x, start.y, start.z, end.x, end.y, end.z], 3)
+    );
+    const material = new THREE.LineBasicMaterial({
+      color: 0x4f9dff,
+      transparent: true,
+      opacity: 0.96,
+      linewidth: 2,
+    });
+    const line = new THREE.Line(geometry, material);
+    line.renderOrder = 9;
+    scene.add(line);
+    lineRef.current = line;
+    return;
+  }
+
+  const positions = new Float32Array([start.x, start.y, start.z, end.x, end.y, end.z]);
+  lineRef.current.geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  lineRef.current.geometry.computeBoundingSphere();
+  lineRef.current.visible = true;
 }
 
 async function readSourceArrayBuffer(source: DemViewerSource, signal: AbortSignal) {
@@ -145,6 +199,7 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
     throw new Error(workerResult.error);
   }
 
+  const elevations = new Float32Array(workerResult.elevations);
   const zValues = new Float32Array(workerResult.zValues);
   const colors = new Float32Array(workerResult.colors);
   const terrain = createDemMesh(workerResult.width, workerResult.height, zValues, colors);
@@ -154,6 +209,13 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
     sourceMeta: `${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
     minElevation: workerResult.minElevation,
     maxElevation: workerResult.maxElevation,
+    grid: {
+      width: workerResult.width,
+      height: workerResult.height,
+      planeWidth: workerResult.width,
+      planeHeight: workerResult.height,
+      elevations,
+    } satisfies DemGridData,
   };
 }
 
@@ -161,7 +223,10 @@ export function DemViewport({
   seedKey,
   source,
   autoRotate = true,
+  profileEnabled = false,
+  profileResetKey = 0,
   onMetaChange,
+  onProfileChange,
 }: DemViewportProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -170,9 +235,14 @@ export function DemViewport({
   const controlsRef = useRef<OrbitControls | null>(null);
   const terrainRef = useRef<THREE.Mesh | null>(null);
   const frameRef = useRef<number>(0);
+  const gridDataRef = useRef<DemGridData | null>(null);
+  const profileLineRef = useRef<THREE.Line | null>(null);
+  const profileStartRef = useRef<DemProfilePick | null>(null);
+  const profileEndRef = useRef<DemProfilePick | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
+  const [profileHint, setProfileHint] = useState<string | null>(null);
   const [elevationRange, setElevationRange] = useState<{ min: number; max: number } | null>(
     null
   );
@@ -257,6 +327,12 @@ export function DemViewport({
         terrainRef.current = null;
       }
 
+      if (profileLineRef.current) {
+        scene.remove(profileLineRef.current);
+        disposeLine(profileLineRef.current);
+        profileLineRef.current = null;
+      }
+
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === container) {
@@ -285,10 +361,20 @@ export function DemViewport({
       terrainRef.current = null;
     }
 
+    profileStartRef.current = null;
+    profileEndRef.current = null;
+    onProfileChange?.(null);
+    setProfileHint(null);
+
+    if (profileLineRef.current) {
+      profileLineRef.current.visible = false;
+    }
+
     if (!source) {
       setLoading(false);
       setViewerError(null);
       setElevationRange(null);
+      gridDataRef.current = null;
       onMetaChange?.(null);
       return;
     }
@@ -300,19 +386,21 @@ export function DemViewport({
     setViewerError(null);
 
     loadDemFromSource(source, controller.signal)
-      .then(({ terrain, sourceMeta, minElevation, maxElevation }) => {
+      .then(({ terrain, sourceMeta, minElevation, maxElevation, grid }) => {
         if (cancelled) {
           disposeMesh(terrain);
           return;
         }
         terrainRef.current = terrain;
         scene.add(terrain);
+        gridDataRef.current = grid;
         setElevationRange({ min: minElevation, max: maxElevation });
         onMetaChange?.(sourceMeta);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
         setElevationRange(null);
+        gridDataRef.current = null;
         onMetaChange?.(null);
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -328,13 +416,109 @@ export function DemViewport({
       cancelled = true;
       controller.abort();
     };
-  }, [source, sourceKey, onMetaChange]);
+  }, [source, sourceKey, onMetaChange, onProfileChange]);
+
+  useEffect(() => {
+    profileStartRef.current = null;
+    profileEndRef.current = null;
+    onProfileChange?.(null);
+    if (profileLineRef.current) {
+      profileLineRef.current.visible = false;
+    }
+    setProfileHint(profileEnabled ? "지형 위에서 시작점을 선택하세요." : null);
+  }, [profileResetKey, profileEnabled, onProfileChange]);
+
+  useEffect(() => {
+    const renderer = rendererRef.current;
+    if (!renderer) return;
+
+    if (!profileEnabled) {
+      profileStartRef.current = null;
+      profileEndRef.current = null;
+      setProfileHint(null);
+      return;
+    }
+
+    const pickOnTerrain = (event: PointerEvent): DemProfilePick | null => {
+      const camera = cameraRef.current;
+      const terrain = terrainRef.current;
+      if (!camera || !terrain) return null;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return null;
+
+      const pointer = new THREE.Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObject(terrain, false);
+      if (!hits.length) return null;
+
+      const world = hits[0].point.clone();
+      const local = terrain.worldToLocal(world.clone());
+      return {
+        world,
+        local: { x: local.x, y: local.y },
+      };
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const start = profileStartRef.current;
+      const end = profileEndRef.current;
+      if (!start || end) return;
+
+      const picked = pickOnTerrain(event);
+      if (!picked) return;
+
+      updateProfileLine(sceneRef.current, profileLineRef, start.world, picked.world);
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const picked = pickOnTerrain(event);
+      if (!picked) return;
+
+      const start = profileStartRef.current;
+      const end = profileEndRef.current;
+
+      if (!start || end) {
+        profileStartRef.current = picked;
+        profileEndRef.current = null;
+        onProfileChange?.(null);
+        setProfileHint("끝점을 선택하면 고도 프로파일이 생성됩니다.");
+        updateProfileLine(sceneRef.current, profileLineRef, picked.world, picked.world);
+        return;
+      }
+
+      profileEndRef.current = picked;
+      updateProfileLine(sceneRef.current, profileLineRef, start.world, picked.world);
+
+      const grid = gridDataRef.current;
+      if (!grid) return;
+
+      const profile: DemProfileResult = buildLineProfile(start.local, picked.local, grid);
+      onProfileChange?.(profile);
+      setProfileHint("프로파일 생성 완료. 새 시작점을 선택하면 다시 측정합니다.");
+    };
+
+    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+    setProfileHint((current) => current || "지형 위에서 시작점을 선택하세요.");
+
+    return () => {
+      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [profileEnabled, onProfileChange]);
 
   return (
     <div className="dem-viewport">
       <div ref={containerRef} className="dem-canvas" />
       {loading ? <div className="dem-status">지형 렌더링 중...</div> : null}
       {viewerError ? <div className="dem-error">{viewerError}</div> : null}
+      {profileEnabled && profileHint ? <div className="dem-profile-hint">{profileHint}</div> : null}
       {elevationRange ? (
         <div className="dem-legend" aria-label="elevation-legend">
           <div className="dem-legend-title">Elevation (m)</div>

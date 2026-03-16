@@ -2,11 +2,17 @@
 import { message } from "antd";
 
 import {
+  DemProfilePanel,
   DemSidebar,
   DemViewport,
   DemUploadModal,
 } from "../../components/dem";
-import type { DemItem, DemUploadSubmitPayload, DemViewerSource } from "../../components/dem";
+import type {
+  DemItem,
+  DemProfileResult,
+  DemUploadSubmitPayload,
+  DemViewerSource,
+} from "../../components/dem";
 import { apiPost } from "../../tools/api";
 import "../../components/dem/dem.css";
 
@@ -73,7 +79,10 @@ export function DemPage() {
   const [converting, setConverting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
+  const [profiling, setProfiling] = useState(false);
   const [viewerMeta, setViewerMeta] = useState<string | null>(null);
+  const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
+  const [profileResetKey, setProfileResetKey] = useState(0);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -115,6 +124,11 @@ export function DemPage() {
       });
     };
   }, []);
+
+  useEffect(() => {
+    setProfileResult(null);
+    setProfileResetKey((prev) => prev + 1);
+  }, [selectedDemId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -228,7 +242,10 @@ export function DemPage() {
           seedKey={selectedDem?.dem_id || null}
           source={selectedViewerSource}
           autoRotate={autoRotate}
+          profileEnabled={profiling}
+          profileResetKey={profileResetKey}
           onMetaChange={handleMetaChange}
+          onProfileChange={setProfileResult}
         />
         <DemSidebar
           items={demItems}
@@ -238,16 +255,28 @@ export function DemPage() {
           converting={converting}
           downloading={downloading}
           rotating={autoRotate}
+          profiling={profiling}
           viewerMeta={viewerMeta}
           onSelect={(item) => setSelectedDemId(item.dem_id)}
           onRefresh={handleRefresh}
           onOpenUpload={() => setUploadModalOpen(true)}
           onToggleRotate={() => setAutoRotate((prev) => !prev)}
+          onToggleProfiling={() => setProfiling((prev) => !prev)}
           onConvertItem={handleConvertItem}
           onDownloadTerrainItem={handleDownloadTerrainItem}
           onDownloadTifItem={handleDownloadTifItem}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         />
+        {profiling || profileResult ? (
+          <DemProfilePanel
+            enabled={profiling}
+            profile={profileResult}
+            onClear={() => {
+              setProfileResult(null);
+              setProfileResetKey((prev) => prev + 1);
+            }}
+          />
+        ) : null}
       </div>
 
       <DemUploadModal

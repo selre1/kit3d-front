@@ -1,5 +1,12 @@
-﻿export type { DemItem, DemUploadSubmitPayload, DemViewerSource } from "./types";
+export type {
+  DemItem,
+  DemProfilePoint,
+  DemProfileResult,
+  DemUploadSubmitPayload,
+  DemViewerSource,
+} from "./types";
 
-export { DemViewport } from "./DemViewport";
+export { DemProfilePanel } from "./DemProfilePanel";
 export { DemSidebar } from "./DemSidebar";
 export { DemUploadModal } from "./DemUploadModal";
+export { DemViewport } from "./DemViewport";

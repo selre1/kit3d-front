@@ -13,6 +13,7 @@ type WorkerSuccess = {
   sourceHeight: number;
   minElevation: number;
   maxElevation: number;
+  elevations: ArrayBuffer;
   zValues: ArrayBuffer;
   colors: ArrayBuffer;
 };
@@ -160,6 +161,7 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
     sourceHeight,
     minElevation: sampledData.minElevation,
     maxElevation: sampledData.maxElevation,
+    elevations: sampledData.sampled.buffer,
     zValues: attributes.zValues.buffer,
     colors: attributes.colors.buffer,
   };
@@ -170,7 +172,7 @@ const workerScope: any = self;
 workerScope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   try {
     const payload = await buildWorkerPayload(event.data.arrayBuffer);
-    workerScope.postMessage(payload, [payload.zValues, payload.colors]);
+    workerScope.postMessage(payload, [payload.elevations, payload.zValues, payload.colors]);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to build DEM terrain mesh";

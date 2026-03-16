@@ -4,11 +4,12 @@ import {
   DownloadOutlined,
   EllipsisOutlined,
   FileOutlined,
+  LineChartOutlined,
   MenuOutlined,
   PlayCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
-  TrademarkOutlined ,
+  TrademarkOutlined,
 } from "@ant-design/icons";
 import { Button, Dropdown, Empty, Tag } from "antd";
 import type { MenuProps } from "antd";
@@ -23,11 +24,13 @@ type DemSidebarProps = {
   converting: boolean;
   downloading: boolean;
   rotating: boolean;
+  profiling: boolean;
   viewerMeta: string | null;
   onSelect: (item: DemItem) => void;
   onRefresh: () => void;
   onOpenUpload: () => void;
   onToggleRotate: () => void;
+  onToggleProfiling: () => void;
   onConvertItem: (item: DemItem) => void;
   onDownloadTerrainItem: (item: DemItem) => void;
   onDownloadTifItem: (item: DemItem) => void;
@@ -56,11 +59,13 @@ export function DemSidebar({
   converting,
   downloading,
   rotating,
+  profiling,
   viewerMeta,
   onSelect,
   onRefresh,
   onOpenUpload,
   onToggleRotate,
+  onToggleProfiling,
   onConvertItem,
   onDownloadTerrainItem,
   onDownloadTifItem,
@@ -155,6 +160,14 @@ export function DemSidebar({
             icon={<TrademarkOutlined spin={rotating} />}
             onClick={onToggleRotate}
             aria-label={rotating ? "회전 멈춤" : "회전 시작"}
+          />
+          <Button
+            size="small"
+            type="text"
+            className={`dem-profile-btn ${profiling ? "is-active" : ""}`}
+            icon={<LineChartOutlined />}
+            onClick={onToggleProfiling}
+            aria-label={profiling ? "프로파일 측정 모드 종료" : "프로파일 측정 모드 시작"}
           />
           <Button
             size="small"

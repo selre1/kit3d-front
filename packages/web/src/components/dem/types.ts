@@ -18,3 +18,18 @@ export type DemViewerSource =
   | { mode: "url"; url: string };
 
 export type DemUploadSubmitPayload = { file: File };
+
+export type DemProfilePoint = {
+  distance: number;
+  elevation: number;
+  ratio: number;
+};
+
+export type DemProfileResult = {
+  totalDistance: number;
+  minElevation: number;
+  maxElevation: number;
+  startElevation: number;
+  endElevation: number;
+  samples: DemProfilePoint[];
+};
