@@ -99,9 +99,9 @@ function buildDemAttributes(
   const colors = new Float32Array(count * 3);
 
   const elevationRange = Math.max(maxElevation - minElevation, 1);
-  const heightScale = 0.05;
-  const verticalExaggeration = 30.0;
-  const elevationGamma = 1.5;
+  const heightScale = 0.02;
+  const verticalExaggeration = 15.0;
+  const elevationGamma = 1.0;
 
   const lowColor = new THREE.Color(0x2b8a3e);
   const midColor = new THREE.Color(0xd9c27a);
