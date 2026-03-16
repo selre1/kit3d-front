@@ -31,7 +31,6 @@
 }
 
 .dem-three-status,
-.dem-three-meta,
 .dem-three-error {
   position: absolute;
   z-index: 2;
@@ -50,14 +49,6 @@
   color: #e8eefc;
 }
 
-.dem-three-meta {
-  left: 14px;
-  bottom: 14px;
-  background: rgba(9, 13, 22, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #d6deed;
-  font-variant-numeric: tabular-nums;
-}
 
 .dem-three-error {
   left: 14px;
@@ -150,6 +141,10 @@
 .dem-sidebar-actions .ant-btn:hover {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dem-sidebar-actions .dem-rotate-btn.is-active {
+  color: #89c4ff !important;
 }
 
 .dem-sidebar.is-collapsed .dem-sidebar-headline {
@@ -324,6 +319,17 @@
   flex-direction: column;
   gap: 4px;
   color: #92a1bc;
+}
+
+.dem-tree-meta {
+  margin-top: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #c8d8f5;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .dem-upload-modal .ant-modal-content {

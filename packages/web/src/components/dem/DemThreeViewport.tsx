@@ -8,6 +8,8 @@ import type { DemViewerSource } from "./types";
 type DemThreeViewportProps = {
   seedKey?: string | null;
   source?: DemViewerSource | null;
+  autoRotate?: boolean;
+  onMetaChange?: (meta: string | null) => void;
 };
 
 function parseNoDataValue(raw: unknown): number | null {
@@ -139,7 +141,12 @@ async function loadTerrainFromSource(source: DemViewerSource, signal: AbortSigna
   };
 }
 
-export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
+export function DemThreeViewport({
+  seedKey,
+  source,
+  autoRotate = true,
+  onMetaChange,
+}: DemThreeViewportProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -150,7 +157,6 @@ export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
 
   const [loading, setLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
-  const [sourceMeta, setSourceMeta] = useState<string | null>(null);
 
   const sourceKey = useMemo(() => {
     if (!source) return seedKey || "no-dem-source";
@@ -180,6 +186,8 @@ export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setClearColor(0xd3d3d3);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMappingExposure = 1.1;
     renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
@@ -189,12 +197,19 @@ export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
     controls.enabled = true;
     controls.maxDistance = 1500;
     controls.minDistance = 0;
-    controls.autoRotate = true;
+    controls.autoRotate = autoRotate;
     controlsRef.current = controls;
 
-    const light = new THREE.DirectionalLight(0xffffff);
-    light.position.set(500, 1000, 250);
-    scene.add(light);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(500, 1000, 250);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.55);
+    fillLight.position.set(-420, 720, -260);
+    scene.add(fillLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.28);
+    scene.add(ambientLight);
 
     const gridHelper = new THREE.GridHelper(1000, 40);
     scene.add(gridHelper);
@@ -243,6 +258,11 @@ export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
   }, []);
 
   useEffect(() => {
+    if (!controlsRef.current) return;
+    controlsRef.current.autoRotate = autoRotate;
+  }, [autoRotate]);
+
+  useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
 
@@ -255,7 +275,7 @@ export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
     if (!source) {
       setLoading(false);
       setViewerError(null);
-      setSourceMeta(null);
+      onMetaChange?.(null);
       return;
     }
 
@@ -266,18 +286,18 @@ export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
     setViewerError(null);
 
     loadTerrainFromSource(source, controller.signal)
-      .then(({ terrain, sourceMeta: nextSourceMeta }) => {
+      .then(({ terrain, sourceMeta }) => {
         if (cancelled) {
           disposeMesh(terrain);
           return;
         }
         terrainRef.current = terrain;
         scene.add(terrain);
-        setSourceMeta(nextSourceMeta);
+        onMetaChange?.(sourceMeta);
       })
       .catch(() => {
         if (cancelled) return;
-        setSourceMeta(null);
+        onMetaChange?.(null);
         setViewerError("DEM 렌더링에 실패했습니다.");
       })
       .finally(() => {
@@ -289,16 +309,13 @@ export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
       cancelled = true;
       controller.abort();
     };
-  }, [source, sourceKey]);
+  }, [source, sourceKey, onMetaChange]);
 
   return (
     <div className="dem-three-viewport">
       <div ref={containerRef} className="dem-three-canvas" />
       {loading ? <div className="dem-three-status">Generating 3D Model ...</div> : null}
-      {sourceMeta ? <div className="dem-three-meta">DEM {sourceMeta}</div> : null}
       {viewerError ? <div className="dem-three-error">{viewerError}</div> : null}
     </div>
   );
 }
-
-

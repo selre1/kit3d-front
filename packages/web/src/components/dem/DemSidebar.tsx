@@ -8,6 +8,7 @@ import {
   PlayCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 import { Button, Dropdown, Empty, Tag } from "antd";
 import type { MenuProps } from "antd";
@@ -21,9 +22,12 @@ type DemSidebarProps = {
   refreshing: boolean;
   converting: boolean;
   downloading: boolean;
+  rotating: boolean;
+  viewerMeta: string | null;
   onSelect: (item: DemItem) => void;
   onRefresh: () => void;
   onOpenUpload: () => void;
+  onToggleRotate: () => void;
   onConvertItem: (item: DemItem) => void;
   onDownloadTerrainItem: (item: DemItem) => void;
   onDownloadTifItem: (item: DemItem) => void;
@@ -51,9 +55,12 @@ export function DemSidebar({
   refreshing,
   converting,
   downloading,
+  rotating,
+  viewerMeta,
   onSelect,
   onRefresh,
   onOpenUpload,
+  onToggleRotate,
   onConvertItem,
   onDownloadTerrainItem,
   onDownloadTifItem,
@@ -144,6 +151,14 @@ export function DemSidebar({
           <Button
             size="small"
             type="text"
+            className={`dem-rotate-btn ${rotating ? "is-active" : ""}`}
+            icon={<SyncOutlined spin={rotating} />}
+            onClick={onToggleRotate}
+            aria-label={rotating ? "회전 멈춤" : "회전 시작"}
+          />
+          <Button
+            size="small"
+            type="text"
             icon={<PlusOutlined />}
             onClick={onOpenUpload}
             aria-label="DEM 업로드"
@@ -225,14 +240,10 @@ export function DemSidebar({
         <div className="dem-sidebar-tree">
           <div className="dem-tree-title">{selectedItem.file_name || selectedItem.dem_id}</div>
           <ul>
-            <li>dem</li>
-            <li>terrain</li>
-            <li>quantized-mesh</li>
+            <li>{viewerMeta ? viewerMeta : "메타 정보 없음"}</li>
           </ul>
         </div>
       ) : null}
     </aside>
   );
 }
-
-

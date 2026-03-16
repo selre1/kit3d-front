@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { message } from "antd";
 
 import {
@@ -38,7 +38,9 @@ async function downloadFromUrl(url: string, fallbackFileName: string) {
   const blob = await response.blob();
   const contentDisposition = response.headers.get("content-disposition") || "";
   const match = contentDisposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
-  const headerFileName = match?.[1] ? decodeURIComponent(match[1].replace(/['"]/g, "").trim()) : null;
+  const headerFileName = match?.[1]
+    ? decodeURIComponent(match[1].replace(/['"]/g, "").trim())
+    : null;
   triggerDownload(blob, headerFileName || fallbackFileName);
 }
 
@@ -70,6 +72,8 @@ export function DemPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [converting, setConverting] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [viewerMeta, setViewerMeta] = useState<string | null>(null);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -213,12 +217,18 @@ export function DemPage() {
     }
   };
 
+  const handleMetaChange = useCallback((meta: string | null) => {
+    setViewerMeta(meta);
+  }, []);
+
   return (
     <div className="dem-page-full">
       <div className="dem-stage">
         <DemThreeViewport
           seedKey={selectedDem?.dem_id || null}
           source={selectedViewerSource}
+          autoRotate={autoRotate}
+          onMetaChange={handleMetaChange}
         />
         <DemSidebar
           items={demItems}
@@ -227,9 +237,12 @@ export function DemPage() {
           refreshing={refreshing}
           converting={converting}
           downloading={downloading}
+          rotating={autoRotate}
+          viewerMeta={viewerMeta}
           onSelect={(item) => setSelectedDemId(item.dem_id)}
           onRefresh={handleRefresh}
           onOpenUpload={() => setUploadModalOpen(true)}
+          onToggleRotate={() => setAutoRotate((prev) => !prev)}
           onConvertItem={handleConvertItem}
           onDownloadTerrainItem={handleDownloadTerrainItem}
           onDownloadTifItem={handleDownloadTifItem}
