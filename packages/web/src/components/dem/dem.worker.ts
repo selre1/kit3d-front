@@ -11,6 +11,8 @@ type WorkerSuccess = {
   height: number;
   sourceWidth: number;
   sourceHeight: number;
+  minElevation: number;
+  maxElevation: number;
   zValues: ArrayBuffer;
   colors: ArrayBuffer;
 };
@@ -156,6 +158,8 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
     height: sampledData.sampledHeight,
     sourceWidth,
     sourceHeight,
+    minElevation: sampledData.minElevation,
+    maxElevation: sampledData.maxElevation,
     zValues: attributes.zValues.buffer,
     colors: attributes.colors.buffer,
   };

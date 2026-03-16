@@ -17,6 +17,8 @@ type DemWorkerSuccess = {
   height: number;
   sourceWidth: number;
   sourceHeight: number;
+  minElevation: number;
+  maxElevation: number;
   zValues: ArrayBuffer;
   colors: ArrayBuffer;
 };
@@ -72,6 +74,14 @@ function createDemMesh(
   terrain.position.y = 0;
   terrain.rotation.x = Math.PI / 2;
   return terrain;
+}
+
+function formatElevation(value: number) {
+  if (!Number.isFinite(value)) return "-";
+  const abs = Math.abs(value);
+  if (abs >= 1000) return value.toFixed(0);
+  if (abs >= 100) return value.toFixed(1);
+  return value.toFixed(2);
 }
 
 async function readSourceArrayBuffer(source: DemViewerSource, signal: AbortSignal) {
@@ -142,6 +152,8 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
   return {
     terrain,
     sourceMeta: `${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
+    minElevation: workerResult.minElevation,
+    maxElevation: workerResult.maxElevation,
   };
 }
 
@@ -161,6 +173,9 @@ export function DemViewport({
 
   const [loading, setLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
+  const [elevationRange, setElevationRange] = useState<{ min: number; max: number } | null>(
+    null
+  );
 
   const sourceKey = useMemo(() => {
     if (!source) return seedKey || "no-dem-source";
@@ -273,6 +288,7 @@ export function DemViewport({
     if (!source) {
       setLoading(false);
       setViewerError(null);
+      setElevationRange(null);
       onMetaChange?.(null);
       return;
     }
@@ -284,17 +300,19 @@ export function DemViewport({
     setViewerError(null);
 
     loadDemFromSource(source, controller.signal)
-      .then(({ terrain, sourceMeta }) => {
+      .then(({ terrain, sourceMeta, minElevation, maxElevation }) => {
         if (cancelled) {
           disposeMesh(terrain);
           return;
         }
         terrainRef.current = terrain;
         scene.add(terrain);
+        setElevationRange({ min: minElevation, max: maxElevation });
         onMetaChange?.(sourceMeta);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
+        setElevationRange(null);
         onMetaChange?.(null);
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
@@ -317,6 +335,16 @@ export function DemViewport({
       <div ref={containerRef} className="dem-canvas" />
       {loading ? <div className="dem-status">지형 렌더링 중...</div> : null}
       {viewerError ? <div className="dem-error">{viewerError}</div> : null}
+      {elevationRange ? (
+        <div className="dem-legend" aria-label="elevation-legend">
+          <div className="dem-legend-title">Elevation (m)</div>
+          <div className="dem-legend-body">
+            <div className="dem-legend-max">{formatElevation(elevationRange.max)}</div>
+            <div className="dem-legend-scale" />
+            <div className="dem-legend-min">{formatElevation(elevationRange.min)}</div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -58,6 +58,57 @@
   border: 1px solid rgba(255, 145, 145, 0.45);
   color: #ffe2e2;
 }
+
+.dem-legend {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 2;
+  width: 76px;
+  padding: 8px 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(8, 12, 19, 0.76);
+  backdrop-filter: blur(6px);
+}
+
+.dem-legend-title {
+  font-size: 10px;
+  color: #d8e3f7;
+  line-height: 1.2;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.dem-legend-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.dem-legend-max,
+.dem-legend-min {
+  font-size: 11px;
+  color: #eff5ff;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.dem-legend-scale {
+  width: 16px;
+  height: 108px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(
+    to top,
+    #2b8a3e 0%,
+    #6fb24a 18%,
+    #d9c27a 54%,
+    #e8d8a0 75%,
+    #f8f9fa 100%
+  );
+}
 .dem-sidebar {
   position: absolute;
   top: 0;
