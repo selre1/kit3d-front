@@ -23,6 +23,9 @@ export default defineConfig(({ mode }) => {
       outDir: "./build",
       assetsDir: "front-assets",
     },
+    worker: {
+      format: "es",
+    },
     server: {
       port: 3000,
       proxy: {

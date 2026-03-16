@@ -1,26 +1,32 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { fromArrayBuffer } from "geotiff";
 
 import type { DemViewerSource } from "./types";
 
-type DemThreeViewportProps = {
+type DemViewportProps = {
   seedKey?: string | null;
   source?: DemViewerSource | null;
   autoRotate?: boolean;
   onMetaChange?: (meta: string | null) => void;
 };
 
-function parseNoDataValue(raw: unknown): number | null {
-  if (raw === null || raw === undefined) return null;
-  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
-  if (typeof raw === "string") {
-    const parsed = Number(raw);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  return null;
-}
+type DemWorkerSuccess = {
+  ok: true;
+  width: number;
+  height: number;
+  sourceWidth: number;
+  sourceHeight: number;
+  zValues: ArrayBuffer;
+  colors: ArrayBuffer;
+};
+
+type DemWorkerFailure = {
+  ok: false;
+  error: string;
+};
+
+type DemWorkerResponse = DemWorkerSuccess | DemWorkerFailure;
 
 function disposeMesh(mesh: THREE.Mesh | null) {
   if (!mesh) return;
@@ -33,63 +39,23 @@ function disposeMesh(mesh: THREE.Mesh | null) {
   }
 }
 
-function createTerrainMesh(
+function createDemMesh(
   width: number,
   height: number,
-  raster: ArrayLike<number>,
-  noDataValue: number | null
+  zValues: Float32Array,
+  colors: Float32Array
 ): THREE.Mesh {
-  const geometry = new THREE.PlaneGeometry(width, height, width - 1, height - 1);
+  const geometry = new THREE.PlaneGeometry(
+    width,
+    height,
+    Math.max(1, width - 1),
+    Math.max(1, height - 1)
+  );
   const positionAttribute = geometry.attributes.position as THREE.BufferAttribute;
+  const positionArray = positionAttribute.array as Float32Array;
 
-  const isNoData = (value: number) =>
-    !Number.isFinite(value) || (noDataValue !== null && value === noDataValue);
-
-  let minElevation = Infinity;
-  let maxElevation = -Infinity;
-
-  for (let index = 0; index < positionAttribute.count; index += 1) {
-    const value = Number(raster[index]);
-    if (isNoData(value)) {
-      continue;
-    }
-    if (value < minElevation) minElevation = value;
-    if (value > maxElevation) maxElevation = value;
-  }
-
-  if (!Number.isFinite(minElevation) || !Number.isFinite(maxElevation)) {
-    throw new Error("No valid elevation samples found in GeoTIFF.");
-  }
-
-  const elevationRange = Math.max(maxElevation - minElevation, 1);
-  const heightScale = 0.05;
-  const verticalExaggeration = 30.0;
-  const elevationGamma = 1.5;
-  const colors = new Float32Array(positionAttribute.count * 3);
-  const lowColor = new THREE.Color(0x2b8a3e);
-  const midColor = new THREE.Color(0xd9c27a);
-  const highColor = new THREE.Color(0xf8f9fa);
-  const vertexColor = new THREE.Color();
-
-  for (let index = 0; index < positionAttribute.count; index += 1) {
-    const rawValue = Number(raster[index]);
-    const safeValue = isNoData(rawValue) ? minElevation : rawValue;
-    const elevationRatio = (safeValue - minElevation) / elevationRange;
-    const weightedRatio = Math.pow(elevationRatio, elevationGamma);
-    const normalizedHeight =
-      weightedRatio * elevationRange * heightScale * verticalExaggeration;
-    positionAttribute.setZ(index, -normalizedHeight);
-
-    if (weightedRatio < 0.5) {
-      vertexColor.copy(lowColor).lerp(midColor, weightedRatio / 0.5);
-    } else {
-      vertexColor.copy(midColor).lerp(highColor, (weightedRatio - 0.5) / 0.5);
-    }
-
-    const colorIndex = index * 3;
-    colors[colorIndex] = vertexColor.r;
-    colors[colorIndex + 1] = vertexColor.g;
-    colors[colorIndex + 2] = vertexColor.b;
+  for (let index = 0, zIndex = 2; index < zValues.length; index += 1, zIndex += 3) {
+    positionArray[zIndex] = zValues[index];
   }
 
   positionAttribute.needsUpdate = true;
@@ -120,33 +86,71 @@ async function readSourceArrayBuffer(source: DemViewerSource, signal: AbortSigna
   return response.arrayBuffer();
 }
 
-async function loadTerrainFromSource(source: DemViewerSource, signal: AbortSignal) {
+async function runDemWorker(
+  arrayBuffer: ArrayBuffer,
+  signal: AbortSignal
+): Promise<DemWorkerResponse> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Aborted", "AbortError"));
+      return;
+    }
+
+    const worker = new Worker(new URL("./dem.worker.ts", import.meta.url), {
+      type: "module",
+    });
+
+    const cleanup = () => {
+      signal.removeEventListener("abort", handleAbort);
+      worker.onmessage = null;
+      worker.onerror = null;
+      worker.terminate();
+    };
+
+    const handleAbort = () => {
+      cleanup();
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+
+    signal.addEventListener("abort", handleAbort, { once: true });
+
+    worker.onmessage = (event: MessageEvent<DemWorkerResponse>) => {
+      cleanup();
+      resolve(event.data);
+    };
+
+    worker.onerror = (event: ErrorEvent) => {
+      cleanup();
+      reject(new Error(event.message || "DEM worker failed"));
+    };
+
+    worker.postMessage({ arrayBuffer }, [arrayBuffer]);
+  });
+}
+
+async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
   const arrayBuffer = await readSourceArrayBuffer(source, signal);
-  const rawTiff = await fromArrayBuffer(arrayBuffer);
-  const tifImage = await rawTiff.getImage();
+  const workerResult = await runDemWorker(arrayBuffer, signal);
+  if (!workerResult.ok) {
+    throw new Error(workerResult.error);
+  }
 
-  const width = tifImage.getWidth();
-  const height = tifImage.getHeight();
-  const dataResult = await tifImage.readRasters({ interleave: true, samples: [0] });
-  const raster = Array.isArray(dataResult)
-    ? (dataResult[0] as ArrayLike<number>)
-    : (dataResult as ArrayLike<number>);
-
-  const noDataValue = parseNoDataValue(tifImage.getGDALNoData());
-  const terrain = createTerrainMesh(width, height, raster, noDataValue);
+  const zValues = new Float32Array(workerResult.zValues);
+  const colors = new Float32Array(workerResult.colors);
+  const terrain = createDemMesh(workerResult.width, workerResult.height, zValues, colors);
 
   return {
     terrain,
-    sourceMeta: `${width}x${height}`,
+    sourceMeta: `${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
   };
 }
 
-export function DemThreeViewport({
+export function DemViewport({
   seedKey,
   source,
   autoRotate = true,
   onMetaChange,
-}: DemThreeViewportProps) {
+}: DemViewportProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -198,11 +202,11 @@ export function DemThreeViewport({
     controls.autoRotate = autoRotate;
     controlsRef.current = controls;
 
-    const light = new THREE.DirectionalLight(0xffffff, 1.15);
+    const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(500, 1000, 250);
     scene.add(light);
 
-    const ambientLight = new THREE.AmbientLight(0xeeeeee, 0.45);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
     scene.add(ambientLight);
 
     const gridHelper = new THREE.GridHelper(1000, 40);
@@ -279,7 +283,7 @@ export function DemThreeViewport({
     setLoading(true);
     setViewerError(null);
 
-    loadTerrainFromSource(source, controller.signal)
+    loadDemFromSource(source, controller.signal)
       .then(({ terrain, sourceMeta }) => {
         if (cancelled) {
           disposeMesh(terrain);
@@ -289,9 +293,12 @@ export function DemThreeViewport({
         scene.add(terrain);
         onMetaChange?.(sourceMeta);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (cancelled) return;
         onMetaChange?.(null);
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         setViewerError("DEM 렌더링에 실패했습니다.");
       })
       .finally(() => {
@@ -306,10 +313,10 @@ export function DemThreeViewport({
   }, [source, sourceKey, onMetaChange]);
 
   return (
-    <div className="dem-three-viewport">
-      <div ref={containerRef} className="dem-three-canvas" />
-      {loading ? <div className="dem-three-status">지형 렌더링 중...</div> : null}
-      {viewerError ? <div className="dem-three-error">{viewerError}</div> : null}
+    <div className="dem-viewport">
+      <div ref={containerRef} className="dem-canvas" />
+      {loading ? <div className="dem-status">지형 렌더링 중...</div> : null}
+      {viewerError ? <div className="dem-error">{viewerError}</div> : null}
     </div>
   );
 }

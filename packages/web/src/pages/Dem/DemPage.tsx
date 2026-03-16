@@ -3,7 +3,7 @@ import { message } from "antd";
 
 import {
   DemSidebar,
-  DemThreeViewport,
+  DemViewport,
   DemUploadModal,
 } from "../../components/dem";
 import type { DemItem, DemUploadSubmitPayload, DemViewerSource } from "../../components/dem";
@@ -224,7 +224,7 @@ export function DemPage() {
   return (
     <div className="dem-page-full">
       <div className="dem-stage">
-        <DemThreeViewport
+        <DemViewport
           seedKey={selectedDem?.dem_id || null}
           source={selectedViewerSource}
           autoRotate={autoRotate}

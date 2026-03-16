@@ -14,24 +14,24 @@
   background: #bfbfbf;
 }
 
-.dem-three-viewport {
+.dem-viewport {
   position: absolute;
   inset: 0;
 }
 
-.dem-three-canvas {
+.dem-canvas {
   position: absolute;
   inset: 0;
 }
 
-.dem-three-canvas canvas {
+.dem-canvas canvas {
   width: 100% !important;
   height: 100% !important;
   display: block;
 }
 
-.dem-three-status,
-.dem-three-error {
+.dem-status,
+.dem-error {
   position: absolute;
   z-index: 2;
   border-radius: 8px;
@@ -41,7 +41,7 @@
   backdrop-filter: blur(6px);
 }
 
-.dem-three-status {
+.dem-status {
   top: 14px;
   right: 14px;
   background: rgba(9, 13, 22, 0.78);
@@ -50,7 +50,7 @@
 }
 
 
-.dem-three-error {
+.dem-error {
   left: 14px;
   right: 14px;
   bottom: 50px;
