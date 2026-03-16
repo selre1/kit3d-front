@@ -21,15 +21,21 @@ function indexOf(width: number, x: number, y: number) {
   return y * width + x;
 }
 
-function toGridCoordinate(localValue: number, planeSize: number, gridSize: number) {
+function toGridCoordinate(
+  localValue: number,
+  planeSize: number,
+  gridSize: number,
+  invert = false
+) {
   if (gridSize <= 1 || planeSize <= 0) return 0;
   const normalized = (localValue + planeSize / 2) / planeSize;
-  return clamp(normalized * (gridSize - 1), 0, gridSize - 1);
+  const value = invert ? 1 - normalized : normalized;
+  return clamp(value * (gridSize - 1), 0, gridSize - 1);
 }
 
 export function sampleElevation(point: DemLocalPoint, grid: DemGridData) {
   const gx = toGridCoordinate(point.x, grid.planeWidth, grid.width);
-  const gy = toGridCoordinate(point.y, grid.planeHeight, grid.height);
+  const gy = toGridCoordinate(point.y, grid.planeHeight, grid.height, true);
 
   const x0 = Math.floor(gx);
   const y0 = Math.floor(gy);
