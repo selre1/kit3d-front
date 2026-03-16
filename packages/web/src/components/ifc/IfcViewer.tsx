@@ -3,12 +3,12 @@ import type { MouseEvent } from "react";
 import {
   Button,
   Checkbox,
-  Collapse,
   Empty,
   Spin,
 } from "antd";
 import {
   AimOutlined,
+  AppstoreOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
 } from "@ant-design/icons";
@@ -297,34 +297,36 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
       <div ref={containerRef} className="ifc-viewer-canvas" />
       {viewerEnabled && entityEntries.length ? (
         <div
-          className="viewer-classifier"
+          className={`viewer-sidebar ${classifierOpen ? "is-open" : ""}`}
           onMouseEnter={() => setClassifierOpen(true)}
           onMouseLeave={() => setClassifierOpen(false)}
         >
-          <Collapse
-            size="small"
-            activeKey={classifierOpen ? ["entities"] : []}
-            items={[
-              {
-                key: "entities",
-                label: "IFC 분류 필터",
-                children: (
-                  <div className="viewer-classifier-list">
-                    {entityEntries.map(([name]) => (
-                      <Checkbox
-                        key={name}
-                        className="viewer-classifier-item"
-                        checked={entityVisibility[name] ?? true}
-                        onChange={(event) => handleToggleEntity(name, event.target.checked)}
-                      >
-                        {name}
-                      </Checkbox>
-                    ))}
-                  </div>
-                ),
-              },
-            ]}
-          />
+          <div className="viewer-sidebar-icons">
+            <button
+              type="button"
+              className="viewer-sidebar-icon"
+              onClick={() => setClassifierOpen((prev) => !prev)}
+              aria-label="Toggle IFC classifier"
+              aria-expanded={classifierOpen}
+            >
+              <AppstoreOutlined />
+            </button>
+          </div>
+          <div className="viewer-sidebar-panel">
+            <div className="viewer-sidebar-title">IFC Classifier</div>
+            <div className="viewer-classifier-list">
+              {entityEntries.map(([name]) => (
+                <Checkbox
+                  key={name}
+                  className="viewer-classifier-item"
+                  checked={entityVisibility[name] ?? true}
+                  onChange={(event) => handleToggleEntity(name, event.target.checked)}
+                >
+                  {name}
+                </Checkbox>
+              ))}
+            </div>
+          </div>
         </div>
       ) : null}
       {viewerEnabled ? (
