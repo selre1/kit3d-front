@@ -23,5 +23,8 @@ export function apiGet<T>(path: string): Promise<T> {
 }
 
 export function apiPost<T>(path: string, json: unknown): Promise<T> {
+  if (typeof FormData !== "undefined" && json instanceof FormData) {
+    return request<T>(path, { method: "POST", body: json });
+  }
   return request<T>(path, { method: "POST", json });
 }

@@ -1,4 +1,4 @@
-﻿export type { DemItem, DemUploadSubmitPayload } from "./types";
+﻿export type { DemItem, DemUploadSubmitPayload, DemViewerSource } from "./types";
 
 export { DemThreeViewport } from "./DemThreeViewport";
 export { DemSidebar } from "./DemSidebar";

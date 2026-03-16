@@ -3,6 +3,7 @@
   job_id?: string | null;
   file_name?: string | null;
   file_path: string;
+  file_url?: string | null;
   file_size?: number | null;
   uploaded_at?: string | null;
   status?: string | null;
@@ -12,6 +13,8 @@
   tileset_url?: string | null;
 };
 
-export type DemUploadSubmitPayload =
-  | { mode: "file"; file: File }
+export type DemViewerSource =
+  | { mode: "file"; file: File; object_url: string }
   | { mode: "url"; url: string };
+
+export type DemUploadSubmitPayload = { file: File };

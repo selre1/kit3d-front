@@ -50,7 +50,7 @@ export function AppShell({
           items={[
             { key: "home", label: "홈", icon: <HomeOutlined /> },
             { key: "projects", label: "3D 모델", icon: <ProjectOutlined /> },
-            { key: "dem", label: "지형", icon: <EnvironmentOutlined /> },
+            { key: "dem", label: "지형 모델", icon: <EnvironmentOutlined /> },
             { key: "settings", label: "설정", icon: <SettingOutlined /> },
           ]}
         />

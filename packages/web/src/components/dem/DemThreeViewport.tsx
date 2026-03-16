@@ -1,92 +1,145 @@
-﻿import { useEffect, useRef } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { fromArrayBuffer } from "geotiff";
+
+import type { DemViewerSource } from "./types";
 
 type DemThreeViewportProps = {
   seedKey?: string | null;
+  source?: DemViewerSource | null;
 };
 
-function hashSeed(input: string) {
-  let hash = 2166136261;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
+function parseNoDataValue(raw: unknown): number | null {
+  if (raw === null || raw === undefined) return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string") {
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) return parsed;
   }
-  return Math.abs(hash % 100000);
+  return null;
 }
 
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
+function disposeMesh(mesh: THREE.Mesh | null) {
+  if (!mesh) return;
+  mesh.geometry.dispose();
+  const material = mesh.material;
+  if (Array.isArray(material)) {
+    material.forEach((item) => item.dispose());
+  } else {
+    material.dispose();
+  }
 }
 
-function mixColor(a: THREE.Color, b: THREE.Color, t: number) {
-  return new THREE.Color(lerp(a.r, b.r, t), lerp(a.g, b.g, t), lerp(a.b, b.b, t));
-}
+function createTerrainMesh(
+  width: number,
+  height: number,
+  raster: ArrayLike<number>,
+  noDataValue: number | null
+): THREE.Mesh {
+  const geometry = new THREE.PlaneGeometry(width, height, width - 1, height - 1);
+  const positionAttribute = geometry.attributes.position as THREE.BufferAttribute;
 
-function buildTerrain(seed: number) {
-  const geometry = new THREE.PlaneGeometry(220, 220, 220, 220);
-  const position = geometry.attributes.position as THREE.BufferAttribute;
-  const heights = new Float32Array(position.count);
+  const isNoData = (value: number) =>
+    !Number.isFinite(value) || (noDataValue !== null && value === noDataValue);
 
-  let min = Infinity;
-  let max = -Infinity;
+  let minElevation = Infinity;
+  let maxElevation = -Infinity;
 
-  for (let i = 0; i < position.count; i += 1) {
-    const x = position.getX(i);
-    const y = position.getY(i);
-
-    const radial = Math.max(0, 1 - Math.hypot(x, y) / 112);
-    const ridge = Math.sin((x + seed) * 0.075) * Math.cos((y - seed) * 0.082);
-    const detailA = Math.sin((x * 0.42 + y * 0.18 + seed) * 0.34);
-    const detailB = Math.cos((x * 0.17 - y * 0.39 - seed) * 0.46);
-    const peak = Math.pow(radial, 2.8) * 84;
-
-    const height = peak + ridge * 13 + detailA * 5 + detailB * 4;
-    heights[i] = height;
-    min = Math.min(min, height);
-    max = Math.max(max, height);
-    position.setZ(i, height);
+  for (let index = 0; index < positionAttribute.count; index += 1) {
+    const value = Number(raster[index]);
+    if (isNoData(value)) {
+      continue;
+    }
+    if (value < minElevation) minElevation = value;
+    if (value > maxElevation) maxElevation = value;
   }
 
-  const colorAttr = new Float32Array(position.count * 3);
-  const low = new THREE.Color("#6f6756");
-  const mid = new THREE.Color("#4d5f45");
-  const high = new THREE.Color("#2d3640");
-  const peakColor = new THREE.Color("#25a7b0");
+  if (!Number.isFinite(minElevation) || !Number.isFinite(maxElevation)) {
+    throw new Error("No valid elevation samples found in GeoTIFF.");
+  }
 
-  for (let i = 0; i < position.count; i += 1) {
-    const t = (heights[i] - min) / Math.max(1e-6, max - min);
+  const elevationRange = Math.max(maxElevation - minElevation, 1);
+  const heightScale = 0.05;
+  const verticalExaggeration = 30.0;
+  const elevationGamma = 1.5;
+  const colors = new Float32Array(positionAttribute.count * 3);
+  const lowColor = new THREE.Color(0x2b8a3e);
+  const midColor = new THREE.Color(0xd9c27a);
+  const highColor = new THREE.Color(0xf8f9fa);
+  const vertexColor = new THREE.Color();
 
-    let color: THREE.Color;
-    if (t < 0.34) {
-      color = mixColor(low, mid, t / 0.34);
-    } else if (t < 0.78) {
-      color = mixColor(mid, high, (t - 0.34) / 0.44);
+  for (let index = 0; index < positionAttribute.count; index += 1) {
+    const rawValue = Number(raster[index]);
+    const safeValue = isNoData(rawValue) ? minElevation : rawValue;
+    const elevationRatio = (safeValue - minElevation) / elevationRange;
+    const weightedRatio = Math.pow(elevationRatio, elevationGamma);
+    const normalizedHeight =
+      weightedRatio * elevationRange * heightScale * verticalExaggeration;
+    positionAttribute.setZ(index, -normalizedHeight);
+
+    if (weightedRatio < 0.5) {
+      vertexColor.copy(lowColor).lerp(midColor, weightedRatio / 0.5);
     } else {
-      color = mixColor(high, peakColor, (t - 0.78) / 0.22);
+      vertexColor.copy(midColor).lerp(highColor, (weightedRatio - 0.5) / 0.5);
     }
 
-    colorAttr[i * 3] = color.r;
-    colorAttr[i * 3 + 1] = color.g;
-    colorAttr[i * 3 + 2] = color.b;
+    const colorIndex = index * 3;
+    colors[colorIndex] = vertexColor.r;
+    colors[colorIndex + 1] = vertexColor.g;
+    colors[colorIndex + 2] = vertexColor.b;
   }
 
-  geometry.setAttribute("color", new THREE.BufferAttribute(colorAttr, 3));
+  positionAttribute.needsUpdate = true;
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
   geometry.computeVertexNormals();
 
-  const material = new THREE.MeshStandardMaterial({
+  const material = new THREE.MeshLambertMaterial({
     vertexColors: true,
-    roughness: 0.94,
-    metalness: 0.03,
+    side: THREE.DoubleSide,
+    wireframe: false,
   });
 
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.receiveShadow = true;
-  return mesh;
+  const terrain = new THREE.Mesh(geometry, material);
+  terrain.position.y = 0;
+  terrain.rotation.x = Math.PI / 2;
+  return terrain;
 }
 
-export function DemThreeViewport({ seedKey }: DemThreeViewportProps) {
+async function readSourceArrayBuffer(source: DemViewerSource, signal: AbortSignal) {
+  if (source.mode === "file") {
+    return source.file.arrayBuffer();
+  }
+
+  const response = await fetch(source.url, { signal });
+  if (!response.ok) {
+    throw new Error(`Failed to load DEM source: ${response.status}`);
+  }
+  return response.arrayBuffer();
+}
+
+async function loadTerrainFromSource(source: DemViewerSource, signal: AbortSignal) {
+  const arrayBuffer = await readSourceArrayBuffer(source, signal);
+  const rawTiff = await fromArrayBuffer(arrayBuffer);
+  const tifImage = await rawTiff.getImage();
+
+  const width = tifImage.getWidth();
+  const height = tifImage.getHeight();
+  const dataResult = await tifImage.readRasters({ interleave: true, samples: [0] });
+  const raster = Array.isArray(dataResult)
+    ? (dataResult[0] as ArrayLike<number>)
+    : (dataResult as ArrayLike<number>);
+
+  const noDataValue = parseNoDataValue(tifImage.getGDALNoData());
+  const terrain = createTerrainMesh(width, height, raster, noDataValue);
+
+  return {
+    terrain,
+    sourceMeta: `${width}x${height}`,
+  };
+}
+
+export function DemThreeViewport({ seedKey, source }: DemThreeViewportProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -95,79 +148,92 @@ export function DemThreeViewport({ seedKey }: DemThreeViewportProps) {
   const terrainRef = useRef<THREE.Mesh | null>(null);
   const frameRef = useRef<number>(0);
 
+  const [loading, setLoading] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const [sourceMeta, setSourceMeta] = useState<string | null>(null);
+
+  const sourceKey = useMemo(() => {
+    if (!source) return seedKey || "no-dem-source";
+    if (source.mode === "file") {
+      return `${source.file.name}-${source.file.size}-${source.file.lastModified}`;
+    }
+    return source.url;
+  }, [seedKey, source]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color("#c7c7c7");
+    scene.background = new THREE.Color(0xd3d3d3);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(
-      46,
+      75,
       container.clientWidth / Math.max(1, container.clientHeight),
       0.1,
-      2000
+      10000
     );
-    camera.position.set(142, 118, 152);
+    camera.position.set(1000, 1000, 1000);
+    camera.lookAt(scene.position);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0xd3d3d3);
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.06;
-    controls.target.set(0, 20, 0);
-    controls.update();
+    controls.enabled = true;
+    controls.maxDistance = 1500;
+    controls.minDistance = 0;
+    controls.autoRotate = true;
     controlsRef.current = controls;
 
-    const ambient = new THREE.AmbientLight("#ffffff", 0.6);
-    const keyLight = new THREE.DirectionalLight("#ffffff", 1.12);
-    keyLight.position.set(140, 210, 110);
-    const rimLight = new THREE.DirectionalLight("#8bb7ff", 0.36);
-    rimLight.position.set(-110, 80, -140);
+    const light = new THREE.DirectionalLight(0xffffff);
+    light.position.set(500, 1000, 250);
+    scene.add(light);
 
-    scene.add(ambient, keyLight, rimLight);
+    const gridHelper = new THREE.GridHelper(1000, 40);
+    scene.add(gridHelper);
 
-    const grid = new THREE.GridHelper(360, 40, "#95a0b3", "#aab2c1");
-    scene.add(grid);
-
-    const axis = new THREE.AxesHelper(80);
-    scene.add(axis);
+    const axesHelper = new THREE.AxesHelper(500);
+    scene.add(axesHelper);
 
     const resizeObserver = new ResizeObserver(() => {
-      if (!container || !cameraRef.current || !rendererRef.current) return;
-      const nextWidth = container.clientWidth;
-      const nextHeight = container.clientHeight;
-      cameraRef.current.aspect = nextWidth / Math.max(1, nextHeight);
+      if (!cameraRef.current || !rendererRef.current) return;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      rendererRef.current.setSize(width, height);
+      cameraRef.current.aspect = width / Math.max(1, height);
       cameraRef.current.updateProjectionMatrix();
-      rendererRef.current.setSize(nextWidth, nextHeight);
     });
     resizeObserver.observe(container);
 
-    const tick = () => {
+    const renderLoop = () => {
       controls.update();
       renderer.render(scene, camera);
-      frameRef.current = window.requestAnimationFrame(tick);
+      frameRef.current = window.requestAnimationFrame(renderLoop);
     };
-    tick();
+    renderLoop();
 
     return () => {
       resizeObserver.disconnect();
       window.cancelAnimationFrame(frameRef.current);
 
-      terrainRef.current?.geometry.dispose();
-      (terrainRef.current?.material as THREE.Material | undefined)?.dispose();
-      terrainRef.current = null;
+      if (terrainRef.current) {
+        scene.remove(terrainRef.current);
+        disposeMesh(terrainRef.current);
+        terrainRef.current = null;
+      }
 
       controls.dispose();
       renderer.dispose();
-      container.removeChild(renderer.domElement);
+      if (renderer.domElement.parentElement === container) {
+        container.removeChild(renderer.domElement);
+      }
 
       sceneRef.current = null;
       rendererRef.current = null;
@@ -182,16 +248,57 @@ export function DemThreeViewport({ seedKey }: DemThreeViewportProps) {
 
     if (terrainRef.current) {
       scene.remove(terrainRef.current);
-      terrainRef.current.geometry.dispose();
-      (terrainRef.current.material as THREE.Material).dispose();
+      disposeMesh(terrainRef.current);
       terrainRef.current = null;
     }
 
-    const seed = hashSeed(seedKey || "default-dem");
-    const terrain = buildTerrain(seed);
-    terrainRef.current = terrain;
-    scene.add(terrain);
-  }, [seedKey]);
+    if (!source) {
+      setLoading(false);
+      setViewerError(null);
+      setSourceMeta(null);
+      return;
+    }
 
-  return <div ref={containerRef} className="dem-three-viewport" />;
+    let cancelled = false;
+    const controller = new AbortController();
+
+    setLoading(true);
+    setViewerError(null);
+
+    loadTerrainFromSource(source, controller.signal)
+      .then(({ terrain, sourceMeta: nextSourceMeta }) => {
+        if (cancelled) {
+          disposeMesh(terrain);
+          return;
+        }
+        terrainRef.current = terrain;
+        scene.add(terrain);
+        setSourceMeta(nextSourceMeta);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSourceMeta(null);
+        setViewerError("DEM 렌더링에 실패했습니다.");
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [source, sourceKey]);
+
+  return (
+    <div className="dem-three-viewport">
+      <div ref={containerRef} className="dem-three-canvas" />
+      {loading ? <div className="dem-three-status">Generating 3D Model ...</div> : null}
+      {sourceMeta ? <div className="dem-three-meta">DEM {sourceMeta}</div> : null}
+      {viewerError ? <div className="dem-three-error">{viewerError}</div> : null}
+    </div>
+  );
 }
+
+

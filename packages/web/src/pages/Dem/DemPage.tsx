@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { message } from "antd";
 
 import {
@@ -6,70 +6,17 @@ import {
   DemThreeViewport,
   DemUploadModal,
 } from "../../components/dem";
-import type { DemItem, DemUploadSubmitPayload } from "../../components/dem";
+import type { DemItem, DemUploadSubmitPayload, DemViewerSource } from "../../components/dem";
+import { apiPost } from "../../tools/api";
 import "../../components/dem/dem.css";
 
-function wait(ms: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function createDummyDemList(): DemItem[] {
-  return [
-    {
-      dem_id: "dem-20260312-001",
-      job_id: "job-dem-20260312-001",
-      file_name: "origin_s16_dem.tif",
-      file_path: "/data/assets/terrain/job-dem-20260312-001/dem/origin_s16_dem.tif",
-      file_size: 182_332_118,
-      uploaded_at: "Latest version · 1 day ago",
-      status: "UPLOADED",
-      terrain_status: "COMPLETED",
-    },
-    {
-      dem_id: "dem-20260312-002",
-      job_id: "job-dem-20260312-002",
-      file_name: "seoul_hill_dem.tif",
-      file_path: "/data/assets/terrain/job-dem-20260312-002/dem/seoul_hill_dem.tif",
-      file_size: 96_025_441,
-      uploaded_at: "Latest version · 4 hours ago",
-      status: "UPLOADED",
-      terrain_status: "UPLOADED",
-    },
-  ];
-}
-
-function createItemFromPayload(payload: DemUploadSubmitPayload): DemItem {
-  const now = Date.now();
-  const demId = `dem-${now}`;
-  const jobId = `job-dem-${now}`;
-
-  if (payload.mode === "file") {
-    return {
-      dem_id: demId,
-      job_id: jobId,
-      file_name: payload.file.name,
-      file_path: `/data/assets/terrain/${jobId}/dem/${payload.file.name}`,
-      file_size: payload.file.size,
-      uploaded_at: "Latest version · just now",
-      status: "UPLOADED",
-      terrain_status: "UPLOADED",
-    };
-  }
-
-  const fromUrl = payload.url.split("/").filter(Boolean).pop() || `remote-${demId}.tif`;
-  return {
-    dem_id: demId,
-    job_id: jobId,
-    file_name: fromUrl,
-    file_path: payload.url,
-    file_size: null,
-    uploaded_at: "Latest version · just now",
-    status: "UPLOADED",
-    terrain_status: "UPLOADED",
-  };
-}
+type DemUploadApiResponse = {
+  file_name: string;
+  file_path: string;
+  file_url: string;
+  file_size: number;
+  uploaded_at: string;
+};
 
 function triggerDownload(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -82,8 +29,42 @@ function triggerDownload(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
+async function downloadFromUrl(url: string, fallbackFileName: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const contentDisposition = response.headers.get("content-disposition") || "";
+  const match = contentDisposition.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
+  const headerFileName = match?.[1] ? decodeURIComponent(match[1].replace(/['"]/g, "").trim()) : null;
+  triggerDownload(blob, headerFileName || fallbackFileName);
+}
+
+function parseErrorMessage(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "요청 처리에 실패했습니다.";
+  }
+
+  const text = error.message || "";
+  try {
+    const parsed = JSON.parse(text) as { detail?: string };
+    return parsed.detail || "요청 처리에 실패했습니다.";
+  } catch {
+    return text || "요청 처리에 실패했습니다.";
+  }
+}
+
+function formatUploadedAt(value?: string | null) {
+  if (!value) return "Latest version · just now";
+  return `Latest version · ${value}`;
+}
+
 export function DemPage() {
   const [demItems, setDemItems] = useState<DemItem[]>([]);
+  const [viewerSources, setViewerSources] = useState<Record<string, DemViewerSource>>({});
+  const viewerSourcesRef = useRef<Record<string, DemViewerSource>>({});
   const [selectedDemId, setSelectedDemId] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -97,98 +78,117 @@ export function DemPage() {
     [demItems, selectedDemId]
   );
 
+  const selectedViewerSource = useMemo(() => {
+    if (!selectedDem) return null;
+
+    const localSource = viewerSources[selectedDem.dem_id];
+    if (localSource) {
+      return localSource;
+    }
+
+    const sourceUrl = (selectedDem.file_url || selectedDem.file_path || "").trim();
+    if (
+      sourceUrl.startsWith("http://") ||
+      sourceUrl.startsWith("https://") ||
+      sourceUrl.startsWith("/assets/")
+    ) {
+      return { mode: "url", url: sourceUrl } satisfies DemViewerSource;
+    }
+
+    return null;
+  }, [selectedDem, viewerSources]);
+
   useEffect(() => {
-    const initial = createDummyDemList();
-    setDemItems(initial);
-    setSelectedDemId(initial[0]?.dem_id ?? null);
+    viewerSourcesRef.current = viewerSources;
+  }, [viewerSources]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(viewerSourcesRef.current).forEach((source) => {
+        if (source.mode === "file") {
+          URL.revokeObjectURL(source.object_url);
+        }
+      });
+    };
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    try {
-      await wait(280);
-      message.success("목록을 새로고침했습니다.");
-    } finally {
-      setRefreshing(false);
-    }
+    setRefreshing(false);
   };
 
   const handleUploadSubmit = async (payload: DemUploadSubmitPayload) => {
     setUploading(true);
     try {
-      await wait(420);
-      const next = createItemFromPayload(payload);
-      setDemItems((prev) => [next, ...prev]);
-      setSelectedDemId(next.dem_id);
+      const formData = new FormData();
+      formData.append("file", payload.file);
+
+      const response = await apiPost<DemUploadApiResponse>("/api/v1/dem/upload", formData);
+      const now = Date.now();
+      const demId = `dem-${now}`;
+
+      const nextItem: DemItem = {
+        dem_id: demId,
+        file_name: response.file_name,
+        file_path: response.file_path,
+        file_url: response.file_url,
+        file_size: response.file_size,
+        uploaded_at: formatUploadedAt(response.uploaded_at),
+        status: "UPLOADED",
+        terrain_status: "UPLOADED",
+      };
+
+      setDemItems((prev) => [nextItem, ...prev]);
+      setSelectedDemId(nextItem.dem_id);
+      setViewerSources((prev) => {
+        const oldSource = prev[nextItem.dem_id];
+        if (oldSource?.mode === "file") {
+          URL.revokeObjectURL(oldSource.object_url);
+        }
+
+        return {
+          ...prev,
+          [nextItem.dem_id]: {
+            mode: "file",
+            file: payload.file,
+            object_url: URL.createObjectURL(payload.file),
+          },
+        };
+      });
+
       setUploadModalOpen(false);
       message.success("DEM 업로드를 완료했습니다.");
+    } catch (error) {
+      message.error(parseErrorMessage(error));
     } finally {
       setUploading(false);
     }
   };
 
   const handleConvertItem = async (item: DemItem) => {
+    setSelectedDemId(item.dem_id);
     if (converting) {
       message.warning("다른 DEM 변환이 진행 중입니다.");
       return;
     }
-
-    setSelectedDemId(item.dem_id);
-    setConverting(true);
-    try {
-      setDemItems((prev) =>
-        prev.map((current) =>
-          current.dem_id === item.dem_id
-            ? { ...current, terrain_status: "RUNNING" }
-            : current
-        )
-      );
-
-      await wait(1300);
-
-      setDemItems((prev) =>
-        prev.map((current) =>
-          current.dem_id === item.dem_id
-            ? { ...current, terrain_status: "COMPLETED" }
-            : current
-        )
-      );
-
-      message.success("Terrain 변환을 완료했습니다.");
-    } finally {
-      setConverting(false);
-    }
+    message.info("Terrain 변환 API 연동 전입니다.");
   };
 
   const handleDownloadTerrainItem = async (item: DemItem) => {
-    const status = (item.terrain_status || "").toUpperCase();
-    if (status !== "COMPLETED") {
-      message.warning("Terrain 변환 완료 후 다운로드할 수 있습니다.");
+    setSelectedDemId(item.dem_id);
+
+    const downloadUrl = (item.terrain_download_url || "").trim();
+    if (!downloadUrl) {
+      message.warning("Terrain 다운로드 URL이 없습니다.");
       return;
     }
 
-    setSelectedDemId(item.dem_id);
     setDownloading(true);
     try {
-      await wait(180);
-      const blob = new Blob(
-        [
-          JSON.stringify(
-            {
-              dem_id: item.dem_id,
-              file_name: item.file_name,
-              generated_at: new Date().toISOString(),
-              mode: "dummy-terrain",
-            },
-            null,
-            2
-          ),
-        ],
-        { type: "application/zip" }
-      );
-
-      const fileName = `${item.file_name || item.dem_id}-terrain.zip`;
-      triggerDownload(blob, fileName);
+      const fallbackName = `${item.file_name || item.dem_id}-terrain.zip`;
+      await downloadFromUrl(downloadUrl, fallbackName);
+    } catch (error) {
+      message.error(parseErrorMessage(error));
     } finally {
       setDownloading(false);
     }
@@ -196,28 +196,18 @@ export function DemPage() {
 
   const handleDownloadTifItem = async (item: DemItem) => {
     setSelectedDemId(item.dem_id);
+
+    const sourceUrl = (item.file_url || "").trim();
+    if (!sourceUrl) {
+      message.warning("다운로드 가능한 TIF URL이 없습니다.");
+      return;
+    }
+
     setDownloading(true);
     try {
-      await wait(120);
-      const blob = new Blob(
-        [
-          JSON.stringify(
-            {
-              dem_id: item.dem_id,
-              file_name: item.file_name,
-              file_path: item.file_path,
-              exported_at: new Date().toISOString(),
-              mode: "dummy-tif",
-            },
-            null,
-            2
-          ),
-        ],
-        { type: "application/octet-stream" }
-      );
-
-      const fileName = item.file_name || `${item.dem_id}.tif`;
-      triggerDownload(blob, fileName);
+      await downloadFromUrl(sourceUrl, item.file_name || `${item.dem_id}.tif`);
+    } catch (error) {
+      message.error(parseErrorMessage(error));
     } finally {
       setDownloading(false);
     }
@@ -226,7 +216,10 @@ export function DemPage() {
   return (
     <div className="dem-page-full">
       <div className="dem-stage">
-        <DemThreeViewport seedKey={selectedDem?.dem_id || null} />
+        <DemThreeViewport
+          seedKey={selectedDem?.dem_id || null}
+          source={selectedViewerSource}
+        />
         <DemSidebar
           items={demItems}
           selectedDemId={selectedDemId}

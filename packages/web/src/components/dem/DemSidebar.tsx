@@ -128,8 +128,8 @@ export function DemSidebar({
 
       <div className="dem-sidebar-header">
         <div className="dem-sidebar-headline">
-          <div className="dem-sidebar-title">DEM Models</div>
-          <div className="dem-sidebar-subtitle">{items.length} items</div>
+          <div className="dem-sidebar-title">지형 모델 목록</div>
+          <div className="dem-sidebar-subtitle">{items.length} 개</div>
         </div>
 
         <div className="dem-sidebar-actions">

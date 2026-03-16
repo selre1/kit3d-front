@@ -19,12 +19,54 @@
   inset: 0;
 }
 
-.dem-three-viewport canvas {
+.dem-three-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.dem-three-canvas canvas {
   width: 100% !important;
   height: 100% !important;
   display: block;
 }
 
+.dem-three-status,
+.dem-three-meta,
+.dem-three-error {
+  position: absolute;
+  z-index: 2;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.3;
+  backdrop-filter: blur(6px);
+}
+
+.dem-three-status {
+  top: 14px;
+  right: 14px;
+  background: rgba(9, 13, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e8eefc;
+}
+
+.dem-three-meta {
+  left: 14px;
+  bottom: 14px;
+  background: rgba(9, 13, 22, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d6deed;
+  font-variant-numeric: tabular-nums;
+}
+
+.dem-three-error {
+  left: 14px;
+  right: 14px;
+  bottom: 50px;
+  background: rgba(126, 24, 24, 0.72);
+  border: 1px solid rgba(255, 145, 145, 0.45);
+  color: #ffe2e2;
+}
 .dem-sidebar {
   position: absolute;
   top: 0;
@@ -411,4 +453,6 @@
 .dem-item-dropdown .ant-dropdown-menu-item-divider {
   background: rgba(255, 255, 255, 0.1);
 }
+
+
 
