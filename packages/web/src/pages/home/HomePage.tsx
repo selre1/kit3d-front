@@ -24,6 +24,11 @@ type UploadItem = ImportJobItem & {
   projectName?: string | null;
 };
 
+type HomeSummaryResponse = {
+  projects?: Project[] | null;
+  uploads?: (ImportJobItem & { project_name?: string | null })[] | null;
+};
+
 function statusTagProps(status?: string | null) {
   const normalized = status?.toUpperCase();
   switch (normalized) {
@@ -53,37 +58,16 @@ export function HomaPage() {
     setError(null);
 
     const load = async () => {
-      const projectList = await apiGet<Project[]>(
-        "/api/v1/project/list?limit=20&offset=0"
+      const summary = await apiGet<HomeSummaryResponse>(
+        "/api/v1/home/summary?project_limit=20&project_offset=0&project_span=8&import_limit=10"
       );
       if (!active) return;
-      const safeProjects = projectList ?? [];
+      const safeProjects = summary?.projects ?? [];
       setProjects(safeProjects);
-
-      const projectSlice = safeProjects.slice(0, 8);
-      const projectMap = new Map(
-        projectSlice.map((project) => [project.project_id, project.name])
-      );
-
-      const uploadResults = await Promise.allSettled(
-        projectSlice.map((project) =>
-          apiGet<ImportJobItem[]>(
-            `/api/v1/import/${project.project_id}/list?limit=10&offset=0`
-          ).then((items) =>
-            (items ?? []).map((item) => ({
-              ...item,
-              projectName: projectMap.get(project.project_id) ?? null,
-            }))
-          )
-        )
-      );
-
-      if (!active) return;
-
-      const nextUploads = uploadResults.flatMap((result) =>
-        result.status === "fulfilled" ? result.value : []
-      );
-
+      const nextUploads = (summary?.uploads ?? []).map((item) => ({
+        ...item,
+        projectName: item.project_name ?? null,
+      }));
       setUploads(nextUploads);
     };
 

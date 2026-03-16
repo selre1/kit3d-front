@@ -65,6 +65,27 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
   const [entityGroups, setEntityGroups] = useState<EntityGroups | null>(null);
   const [entityVisibility, setEntityVisibility] = useState<Record<string, boolean>>({});
   const [classifierOpen, setClassifierOpen] = useState(false);
+  const closeSidebarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelSidebarClose = () => {
+    if (closeSidebarTimerRef.current) {
+      clearTimeout(closeSidebarTimerRef.current);
+      closeSidebarTimerRef.current = null;
+    }
+  };
+
+  const openSidebar = () => {
+    cancelSidebarClose();
+    setClassifierOpen(true);
+  };
+
+  const scheduleSidebarClose = () => {
+    cancelSidebarClose();
+    closeSidebarTimerRef.current = setTimeout(() => {
+      setClassifierOpen(false);
+      closeSidebarTimerRef.current = null;
+    }, 140);
+  };
 
   const resetViewerState = () => {
     setViewerEnabled(false);
@@ -104,6 +125,12 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      cancelSidebarClose();
     };
   }, []);
 
@@ -296,23 +323,30 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
     <div className="ifc-viewer" ref={viewerRef}>
       <div ref={containerRef} className="ifc-viewer-canvas" />
       {viewerEnabled && entityEntries.length ? (
-        <div
-          className={`viewer-sidebar ${classifierOpen ? "is-open" : ""}`}
-          onMouseEnter={() => setClassifierOpen(true)}
-          onMouseLeave={() => setClassifierOpen(false)}
-        >
+        <div className={`viewer-sidebar ${classifierOpen ? "is-open" : ""}`}>
           <div className="viewer-sidebar-icons">
             <button
               type="button"
               className="viewer-sidebar-icon"
-              onClick={() => setClassifierOpen((prev) => !prev)}
+              onMouseEnter={openSidebar}
+              onMouseLeave={scheduleSidebarClose}
+              onFocus={openSidebar}
+              onBlur={scheduleSidebarClose}
+              onClick={() => {
+                cancelSidebarClose();
+                setClassifierOpen((prev) => !prev);
+              }}
               aria-label="Toggle IFC classifier"
               aria-expanded={classifierOpen}
             >
               <AppstoreOutlined />
             </button>
           </div>
-          <div className="viewer-sidebar-panel">
+          <div
+            className="viewer-sidebar-panel"
+            onMouseEnter={openSidebar}
+            onMouseLeave={scheduleSidebarClose}
+          >
             <div className="viewer-sidebar-title">IFC Classifier</div>
             <div className="viewer-classifier-list">
               {entityEntries.map(([name]) => (
