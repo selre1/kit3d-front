@@ -130,6 +130,21 @@ export function DemPage() {
     setProfileResetKey((prev) => prev + 1);
   }, [selectedDemId]);
 
+  useEffect(() => {
+    if (!profiling) return;
+    const media = window.matchMedia("(max-width: 900px)");
+    const syncCollapsed = () => {
+      if (media.matches) {
+        setSidebarCollapsed(true);
+      }
+    };
+    syncCollapsed();
+    media.addEventListener("change", syncCollapsed);
+    return () => {
+      media.removeEventListener("change", syncCollapsed);
+    };
+  }, [profiling]);
+
   const handleRefresh = async () => {
     setRefreshing(true);
     setRefreshing(false);

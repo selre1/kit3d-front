@@ -13,6 +13,8 @@ type WorkerSuccess = {
   sourceHeight: number;
   minElevation: number;
   maxElevation: number;
+  resolutionXMeter: number;
+  resolutionYMeter: number;
   elevations: ArrayBuffer;
   zValues: ArrayBuffer;
   colors: ArrayBuffer;
@@ -87,9 +89,66 @@ function sampleRaster(
     sampled,
     sampledWidth,
     sampledHeight,
+    stepX,
+    stepY,
     minElevation,
     maxElevation,
   };
+}
+
+function metersPerDegreeLon(latitudeDeg: number) {
+  return 111_320 * Math.cos((latitudeDeg * Math.PI) / 180);
+}
+
+function toMetersIfDegrees(
+  valueX: number,
+  valueY: number,
+  latCenter: number,
+  isGeographic: boolean
+) {
+  if (!isGeographic) {
+    return { x: Math.abs(valueX), y: Math.abs(valueY) };
+  }
+
+  return {
+    x: Math.abs(valueX) * Math.max(1, metersPerDegreeLon(latCenter)),
+    y: Math.abs(valueY) * 111_132,
+  };
+}
+
+function resolveMetersPerPixel(tifImage: any) {
+  const fileDirectory = tifImage.getFileDirectory?.() || {};
+  const bbox = tifImage.getBoundingBox?.() as [number, number, number, number] | undefined;
+
+  let scaleX = Number.NaN;
+  let scaleY = Number.NaN;
+  const modelPixelScale = fileDirectory.ModelPixelScale as number[] | undefined;
+  if (Array.isArray(modelPixelScale) && modelPixelScale.length >= 2) {
+    scaleX = Number(modelPixelScale[0]);
+    scaleY = Number(modelPixelScale[1]);
+  }
+
+  if ((!Number.isFinite(scaleX) || !Number.isFinite(scaleY)) && bbox) {
+    const [minX, minY, maxX, maxY] = bbox;
+    const width = Math.max(1, Number(tifImage.getWidth?.() || 1));
+    const height = Math.max(1, Number(tifImage.getHeight?.() || 1));
+    scaleX = (maxX - minX) / width;
+    scaleY = (maxY - minY) / height;
+  }
+
+  if (!Number.isFinite(scaleX) || !Number.isFinite(scaleY)) {
+    return { x: 1, y: 1 };
+  }
+
+  const isGeographic =
+    !!bbox &&
+    Math.abs(bbox[0]) <= 180 &&
+    Math.abs(bbox[2]) <= 180 &&
+    Math.abs(bbox[1]) <= 90 &&
+    Math.abs(bbox[3]) <= 90;
+  const latCenter = bbox ? (bbox[1] + bbox[3]) / 2 : 0;
+
+  return toMetersIfDegrees(scaleX, scaleY, latCenter, isGeographic);
 }
 
 function buildDemAttributes(
@@ -147,6 +206,9 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
 
   const noDataValue = parseNoDataValue(tifImage.getGDALNoData());
   const sampledData = sampleRaster(raster, sourceWidth, sourceHeight, noDataValue);
+  const metersPerPixel = resolveMetersPerPixel(tifImage);
+  const resolutionXMeter = Math.max(0.01, metersPerPixel.x * sampledData.stepX);
+  const resolutionYMeter = Math.max(0.01, metersPerPixel.y * sampledData.stepY);
   const attributes = buildDemAttributes(
     sampledData.sampled,
     sampledData.minElevation,
@@ -161,6 +223,8 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
     sourceHeight,
     minElevation: sampledData.minElevation,
     maxElevation: sampledData.maxElevation,
+    resolutionXMeter,
+    resolutionYMeter,
     elevations: sampledData.sampled.buffer,
     zValues: attributes.zValues.buffer,
     colors: attributes.colors.buffer,

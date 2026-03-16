@@ -26,7 +26,8 @@ export type DemProfilePoint = {
 };
 
 export type DemProfileResult = {
-  totalDistance: number;
+  totalDistanceMeter: number;
+  totalDistanceKm: number;
   minElevation: number;
   maxElevation: number;
   startElevation: number;

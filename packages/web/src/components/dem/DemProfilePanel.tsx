@@ -94,9 +94,9 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
             <div className="dem-profile-stats">
               <Statistic
                 title="거리"
-                value={profile.totalDistance}
-                precision={1}
-                suffix="grid"
+                value={profile.totalDistanceKm}
+                precision={2}
+                suffix="km"
               />
               <Statistic
                 title="최저"
@@ -110,6 +110,14 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
                 precision={1}
                 suffix="m"
               />
+            </div>
+            <div className="dem-profile-endpoints">
+              <span className="dem-profile-endpoint dem-profile-endpoint-start">
+                Start {formatValue(profile.startElevation)} m
+              </span>
+              <span className="dem-profile-endpoint dem-profile-endpoint-end">
+                End {formatValue(profile.endElevation)} m
+              </span>
             </div>
 
             <div className="dem-profile-chart">

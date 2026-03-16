@@ -10,7 +10,10 @@ export type DemGridData = {
   height: number;
   planeWidth: number;
   planeHeight: number;
+  resolutionXMeter: number;
+  resolutionYMeter: number;
   elevations: Float32Array;
+  zSurface: Float32Array;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -55,6 +58,28 @@ export function sampleElevation(point: DemLocalPoint, grid: DemGridData) {
   return top + (bottom - top) * ty;
 }
 
+export function sampleSurfaceZ(point: DemLocalPoint, grid: DemGridData) {
+  const gx = toGridCoordinate(point.x, grid.planeWidth, grid.width);
+  const gy = toGridCoordinate(point.y, grid.planeHeight, grid.height, true);
+
+  const x0 = Math.floor(gx);
+  const y0 = Math.floor(gy);
+  const x1 = Math.min(grid.width - 1, x0 + 1);
+  const y1 = Math.min(grid.height - 1, y0 + 1);
+
+  const tx = gx - x0;
+  const ty = gy - y0;
+
+  const z00 = grid.zSurface[indexOf(grid.width, x0, y0)];
+  const z10 = grid.zSurface[indexOf(grid.width, x1, y0)];
+  const z01 = grid.zSurface[indexOf(grid.width, x0, y1)];
+  const z11 = grid.zSurface[indexOf(grid.width, x1, y1)];
+
+  const top = z00 + (z10 - z00) * tx;
+  const bottom = z01 + (z11 - z01) * tx;
+  return top + (bottom - top) * ty;
+}
+
 export function buildLineProfile(
   start: DemLocalPoint,
   end: DemLocalPoint,
@@ -62,8 +87,8 @@ export function buildLineProfile(
 ): DemProfileResult {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const totalDistance = Math.hypot(dx, dy);
-  const sampleCount = clamp(Math.ceil(totalDistance * 1.2), 48, 240);
+  const totalDistanceMeter = Math.hypot(dx * grid.resolutionXMeter, dy * grid.resolutionYMeter);
+  const sampleCount = clamp(Math.ceil(Math.hypot(dx, dy) * 1.2), 48, 280);
 
   const samples = new Array(sampleCount + 1).fill(null).map((_, index) => {
     const ratio = sampleCount === 0 ? 0 : index / sampleCount;
@@ -73,7 +98,7 @@ export function buildLineProfile(
     };
     const elevation = sampleElevation(point, grid);
     return {
-      distance: totalDistance * ratio,
+      distance: totalDistanceMeter * ratio,
       elevation,
       ratio,
     };
@@ -84,7 +109,8 @@ export function buildLineProfile(
   const maxElevation = Math.max(...elevations);
 
   return {
-    totalDistance,
+    totalDistanceMeter,
+    totalDistanceKm: totalDistanceMeter / 1000,
     minElevation,
     maxElevation,
     startElevation: samples[0]?.elevation ?? 0,

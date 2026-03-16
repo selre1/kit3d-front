@@ -2,7 +2,12 @@ import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "rea
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import { buildLineProfile, type DemGridData, type DemLocalPoint } from "./profile";
+import {
+  buildLineProfile,
+  sampleSurfaceZ,
+  type DemGridData,
+  type DemLocalPoint,
+} from "./profile";
 import type { DemProfileResult, DemViewerSource } from "./types";
 
 type DemViewportProps = {
@@ -23,6 +28,8 @@ type DemWorkerSuccess = {
   sourceHeight: number;
   minElevation: number;
   maxElevation: number;
+  resolutionXMeter: number;
+  resolutionYMeter: number;
   elevations: ArrayBuffer;
   zValues: ArrayBuffer;
   colors: ArrayBuffer;
@@ -40,6 +47,19 @@ type DemProfilePick = {
   local: DemLocalPoint;
 };
 
+type ProfileHintState = {
+  x: number;
+  y: number;
+  text: string;
+};
+
+const PROFILE_LIFT = 1.4;
+const CLICK_MOVE_THRESHOLD = 6;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function disposeMesh(mesh: THREE.Mesh | null) {
   if (!mesh) return;
   mesh.geometry.dispose();
@@ -55,6 +75,17 @@ function disposeLine(line: THREE.Line | null) {
   if (!line) return;
   line.geometry.dispose();
   const material = line.material;
+  if (Array.isArray(material)) {
+    material.forEach((item) => item.dispose());
+  } else {
+    material.dispose();
+  }
+}
+
+function disposeMarker(marker: THREE.Mesh | null) {
+  if (!marker) return;
+  marker.geometry.dispose();
+  const material = marker.material;
   if (Array.isArray(material)) {
     material.forEach((item) => item.dispose());
   } else {
@@ -105,37 +136,150 @@ function formatElevation(value: number) {
   return value.toFixed(2);
 }
 
-function updateProfileLine(
+function ensureProfileLine(
   scene: THREE.Scene | null,
   lineRef: MutableRefObject<THREE.Line | null>,
-  start: THREE.Vector3,
-  end: THREE.Vector3
+  color: number
+) {
+  if (!scene) return null;
+  if (!lineRef.current) {
+    const geometry = new THREE.BufferGeometry();
+    const material = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.98,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const line = new THREE.Line(geometry, material);
+    line.renderOrder = 11;
+    scene.add(line);
+    lineRef.current = line;
+  }
+  return lineRef.current;
+}
+
+function setLinePositions(line: THREE.Line | null, positions: Float32Array) {
+  if (!line) return;
+  line.geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  line.geometry.computeBoundingSphere();
+  line.visible = true;
+}
+
+function hideLine(line: THREE.Line | null) {
+  if (!line) return;
+  line.visible = false;
+}
+
+function ensureMarker(
+  scene: THREE.Scene | null,
+  markerRef: MutableRefObject<THREE.Mesh | null>,
+  color: number
+) {
+  if (!scene) return null;
+  if (!markerRef.current) {
+    const geometry = new THREE.SphereGeometry(2.2, 18, 18);
+    const material = new THREE.MeshStandardMaterial({
+      color,
+      emissive: color,
+      emissiveIntensity: 0.22,
+      roughness: 0.45,
+      metalness: 0.1,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const marker = new THREE.Mesh(geometry, material);
+    marker.renderOrder = 12;
+    scene.add(marker);
+    markerRef.current = marker;
+  }
+  return markerRef.current;
+}
+
+function setMarkerAtPick(
+  markerRef: MutableRefObject<THREE.Mesh | null>,
+  pick: DemProfilePick,
+  grid: DemGridData | null,
+  terrain: THREE.Mesh | null
+) {
+  const marker = markerRef.current;
+  if (!marker || !grid || !terrain) return;
+  const local = new THREE.Vector3(
+    pick.local.x,
+    pick.local.y,
+    sampleSurfaceZ(pick.local, grid) + PROFILE_LIFT + 0.7
+  );
+  marker.position.copy(terrain.localToWorld(local));
+  marker.visible = true;
+}
+
+function clearProfileVisuals(
+  scene: THREE.Scene | null,
+  mainLineRef: MutableRefObject<THREE.Line | null>,
+  guideLineRef: MutableRefObject<THREE.Line | null>,
+  startMarkerRef: MutableRefObject<THREE.Mesh | null>,
+  endMarkerRef: MutableRefObject<THREE.Mesh | null>
 ) {
   if (!scene) return;
 
-  if (!lineRef.current) {
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute([start.x, start.y, start.z, end.x, end.y, end.z], 3)
-    );
-    const material = new THREE.LineBasicMaterial({
-      color: 0x4f9dff,
-      transparent: true,
-      opacity: 0.96,
-      linewidth: 2,
-    });
-    const line = new THREE.Line(geometry, material);
-    line.renderOrder = 9;
-    scene.add(line);
-    lineRef.current = line;
-    return;
+  if (mainLineRef.current) {
+    scene.remove(mainLineRef.current);
+    disposeLine(mainLineRef.current);
+    mainLineRef.current = null;
   }
 
-  const positions = new Float32Array([start.x, start.y, start.z, end.x, end.y, end.z]);
-  lineRef.current.geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-  lineRef.current.geometry.computeBoundingSphere();
-  lineRef.current.visible = true;
+  if (guideLineRef.current) {
+    scene.remove(guideLineRef.current);
+    disposeLine(guideLineRef.current);
+    guideLineRef.current = null;
+  }
+
+  if (startMarkerRef.current) {
+    scene.remove(startMarkerRef.current);
+    disposeMarker(startMarkerRef.current);
+    startMarkerRef.current = null;
+  }
+
+  if (endMarkerRef.current) {
+    scene.remove(endMarkerRef.current);
+    disposeMarker(endMarkerRef.current);
+    endMarkerRef.current = null;
+  }
+}
+
+function buildTerrainLinePositions(
+  start: DemLocalPoint,
+  end: DemLocalPoint,
+  grid: DemGridData,
+  terrain: THREE.Mesh
+) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const steps = Math.max(36, Math.ceil(Math.hypot(dx, dy) * 1.5));
+  const positions = new Float32Array((steps + 1) * 3);
+
+  for (let index = 0; index <= steps; index += 1) {
+    const ratio = index / steps;
+    const localPoint = {
+      x: start.x + dx * ratio,
+      y: start.y + dy * ratio,
+    };
+    const local = new THREE.Vector3(
+      localPoint.x,
+      localPoint.y,
+      sampleSurfaceZ(localPoint, grid) + PROFILE_LIFT
+    );
+    const world = terrain.localToWorld(local);
+    const base = index * 3;
+    positions[base] = world.x;
+    positions[base + 1] = world.y;
+    positions[base + 2] = world.z;
+  }
+  return positions;
+}
+
+function buildGuideLinePositions(start: THREE.Vector3, end: THREE.Vector3) {
+  return new Float32Array([start.x, start.y + PROFILE_LIFT, start.z, end.x, end.y + PROFILE_LIFT, end.z]);
 }
 
 async function readSourceArrayBuffer(source: DemViewerSource, signal: AbortSignal) {
@@ -214,9 +358,18 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
       height: workerResult.height,
       planeWidth: workerResult.width,
       planeHeight: workerResult.height,
+      resolutionXMeter: workerResult.resolutionXMeter,
+      resolutionYMeter: workerResult.resolutionYMeter,
       elevations,
+      zSurface: zValues,
     } satisfies DemGridData,
   };
+}
+
+function hintText(start: DemProfilePick | null, end: DemProfilePick | null) {
+  if (!start) return "클릭하여 시작점을 지정하세요.";
+  if (start && !end) return "클릭하여 끝점을 지정하세요.";
+  return "측정이 완료되었습니다. 초기화 후 다시 측정하세요.";
 }
 
 export function DemViewport({
@@ -237,12 +390,16 @@ export function DemViewport({
   const frameRef = useRef<number>(0);
   const gridDataRef = useRef<DemGridData | null>(null);
   const profileLineRef = useRef<THREE.Line | null>(null);
+  const profileGuideLineRef = useRef<THREE.Line | null>(null);
+  const profileStartMarkerRef = useRef<THREE.Mesh | null>(null);
+  const profileEndMarkerRef = useRef<THREE.Mesh | null>(null);
   const profileStartRef = useRef<DemProfilePick | null>(null);
   const profileEndRef = useRef<DemProfilePick | null>(null);
+  const pointerDownRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
-  const [profileHint, setProfileHint] = useState<string | null>(null);
+  const [profileHint, setProfileHint] = useState<ProfileHintState | null>(null);
   const [elevationRange, setElevationRange] = useState<{ min: number; max: number } | null>(
     null
   );
@@ -327,11 +484,13 @@ export function DemViewport({
         terrainRef.current = null;
       }
 
-      if (profileLineRef.current) {
-        scene.remove(profileLineRef.current);
-        disposeLine(profileLineRef.current);
-        profileLineRef.current = null;
-      }
+      clearProfileVisuals(
+        scene,
+        profileLineRef,
+        profileGuideLineRef,
+        profileStartMarkerRef,
+        profileEndMarkerRef
+      );
 
       controls.dispose();
       renderer.dispose();
@@ -363,12 +522,17 @@ export function DemViewport({
 
     profileStartRef.current = null;
     profileEndRef.current = null;
+    pointerDownRef.current = null;
     onProfileChange?.(null);
     setProfileHint(null);
 
-    if (profileLineRef.current) {
-      profileLineRef.current.visible = false;
-    }
+    clearProfileVisuals(
+      scene,
+      profileLineRef,
+      profileGuideLineRef,
+      profileStartMarkerRef,
+      profileEndMarkerRef
+    );
 
     if (!source) {
       setLoading(false);
@@ -419,13 +583,28 @@ export function DemViewport({
   }, [source, sourceKey, onMetaChange, onProfileChange]);
 
   useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
     profileStartRef.current = null;
     profileEndRef.current = null;
+    pointerDownRef.current = null;
     onProfileChange?.(null);
-    if (profileLineRef.current) {
-      profileLineRef.current.visible = false;
-    }
-    setProfileHint(profileEnabled ? "지형 위에서 시작점을 선택하세요." : null);
+
+    clearProfileVisuals(
+      scene,
+      profileLineRef,
+      profileGuideLineRef,
+      profileStartMarkerRef,
+      profileEndMarkerRef
+    );
+
+    setProfileHint((current) => {
+      if (!profileEnabled || !current) return null;
+      return {
+        ...current,
+        text: hintText(null, null),
+      };
+    });
   }, [profileResetKey, profileEnabled, onProfileChange]);
 
   useEffect(() => {
@@ -433,11 +612,26 @@ export function DemViewport({
     if (!renderer) return;
 
     if (!profileEnabled) {
-      profileStartRef.current = null;
-      profileEndRef.current = null;
       setProfileHint(null);
+      pointerDownRef.current = null;
       return;
     }
+
+    const updateHintAtCursor = (event: PointerEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      if (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height) {
+        setProfileHint(null);
+        return;
+      }
+
+      setProfileHint({
+        x: clamp(localX + 14, 8, rect.width - 8),
+        y: clamp(localY - 12, 8, rect.height - 8),
+        text: hintText(profileStartRef.current, profileEndRef.current),
+      });
+    };
 
     const pickOnTerrain = (event: PointerEvent): DemProfilePick | null => {
       const camera = cameraRef.current;
@@ -459,57 +653,130 @@ export function DemViewport({
 
       const world = hits[0].point.clone();
       const local = terrain.worldToLocal(world.clone());
-      return {
-        world,
-        local: { x: local.x, y: local.y },
+      return { world, local: { x: local.x, y: local.y } };
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      pointerDownRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        moved: false,
       };
     };
 
     const handlePointerMove = (event: PointerEvent) => {
+      updateHintAtCursor(event);
+
+      const pointerDown = pointerDownRef.current;
+      if (pointerDown) {
+        const dx = event.clientX - pointerDown.x;
+        const dy = event.clientY - pointerDown.y;
+        if (Math.hypot(dx, dy) > CLICK_MOVE_THRESHOLD) {
+          pointerDown.moved = true;
+        }
+      }
+
+      if ((event.buttons & 1) === 1) {
+        return;
+      }
+
       const start = profileStartRef.current;
       const end = profileEndRef.current;
       if (!start || end) return;
 
       const picked = pickOnTerrain(event);
       if (!picked) return;
-
-      updateProfileLine(sceneRef.current, profileLineRef, start.world, picked.world);
+      const scene = sceneRef.current;
+      const guideLine = ensureProfileLine(scene, profileGuideLineRef, 0x74b4ff);
+      setLinePositions(guideLine, buildGuideLinePositions(start.world, picked.world));
     };
 
-    const handlePointerDown = (event: PointerEvent) => {
-      const picked = pickOnTerrain(event);
-      if (!picked) return;
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      updateHintAtCursor(event);
+
+      const pointerDown = pointerDownRef.current;
+      pointerDownRef.current = null;
+      if (!pointerDown || pointerDown.moved) return;
 
       const start = profileStartRef.current;
       const end = profileEndRef.current;
+      if (start && end) return;
 
-      if (!start || end) {
+      const picked = pickOnTerrain(event);
+      if (!picked) return;
+
+      const scene = sceneRef.current;
+      const terrain = terrainRef.current;
+      const grid = gridDataRef.current;
+      if (!scene || !terrain || !grid) return;
+
+      if (!start) {
         profileStartRef.current = picked;
         profileEndRef.current = null;
         onProfileChange?.(null);
-        setProfileHint("끝점을 선택하면 고도 프로파일이 생성됩니다.");
-        updateProfileLine(sceneRef.current, profileLineRef, picked.world, picked.world);
+        hideLine(profileLineRef.current);
+        hideLine(profileGuideLineRef.current);
+
+        const startMarker = ensureMarker(scene, profileStartMarkerRef, 0x2f87ff);
+        const endMarker = ensureMarker(scene, profileEndMarkerRef, 0xffa940);
+        if (endMarker) {
+          endMarker.visible = false;
+        }
+        if (startMarker) {
+          setMarkerAtPick(profileStartMarkerRef, picked, grid, terrain);
+        }
+        setProfileHint((current) =>
+          current
+            ? {
+                ...current,
+                text: hintText(profileStartRef.current, profileEndRef.current),
+              }
+            : current
+        );
         return;
       }
 
       profileEndRef.current = picked;
-      updateProfileLine(sceneRef.current, profileLineRef, start.world, picked.world);
+      const endMarker = ensureMarker(scene, profileEndMarkerRef, 0xffa940);
+      if (endMarker) {
+        setMarkerAtPick(profileEndMarkerRef, picked, grid, terrain);
+      }
 
-      const grid = gridDataRef.current;
-      if (!grid) return;
+      hideLine(profileGuideLineRef.current);
+      const finalLine = ensureProfileLine(scene, profileLineRef, 0x57a5ff);
+      const terrainLine = buildTerrainLinePositions(start.local, picked.local, grid, terrain);
+      setLinePositions(finalLine, terrainLine);
 
       const profile: DemProfileResult = buildLineProfile(start.local, picked.local, grid);
       onProfileChange?.(profile);
-      setProfileHint("프로파일 생성 완료. 새 시작점을 선택하면 다시 측정합니다.");
+
+      setProfileHint((current) =>
+        current
+          ? {
+              ...current,
+              text: hintText(profileStartRef.current, profileEndRef.current),
+            }
+          : current
+      );
     };
 
-    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    const handlePointerLeave = () => {
+      setProfileHint(null);
+      pointerDownRef.current = null;
+    };
+
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
-    setProfileHint((current) => current || "지형 위에서 시작점을 선택하세요.");
+    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    renderer.domElement.addEventListener("pointerup", handlePointerUp);
+    renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
 
     return () => {
-      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+      renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
     };
   }, [profileEnabled, onProfileChange]);
 
@@ -518,7 +785,17 @@ export function DemViewport({
       <div ref={containerRef} className="dem-canvas" />
       {loading ? <div className="dem-status">지형 렌더링 중...</div> : null}
       {viewerError ? <div className="dem-error">{viewerError}</div> : null}
-      {profileEnabled && profileHint ? <div className="dem-profile-hint">{profileHint}</div> : null}
+      {profileEnabled && profileHint ? (
+        <div
+          className="dem-profile-hint"
+          style={{
+            left: `${profileHint.x}px`,
+            top: `${profileHint.y}px`,
+          }}
+        >
+          {profileHint.text}
+        </div>
+      ) : null}
       {elevationRange ? (
         <div className="dem-legend" aria-label="elevation-legend">
           <div className="dem-legend-title">Elevation (m)</div>
