@@ -198,9 +198,12 @@ export function DemThreeViewport({
     controls.autoRotate = autoRotate;
     controlsRef.current = controls;
 
-    const light = new THREE.DirectionalLight(0xffffff);
+    const light = new THREE.DirectionalLight(0xffffff, 1.15);
     light.position.set(500, 1000, 250);
     scene.add(light);
+
+    const ambientLight = new THREE.AmbientLight(0xeeeeee, 0.45);
+    scene.add(ambientLight);
 
     const gridHelper = new THREE.GridHelper(1000, 40);
     scene.add(gridHelper);
