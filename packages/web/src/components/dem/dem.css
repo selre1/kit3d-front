@@ -61,23 +61,28 @@
 
 .dem-legend {
   position: absolute;
-  right: 14px;
-  bottom: 14px;
-  z-index: 2;
-  width: 76px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 8;
+  width: 80px;
   padding: 8px 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px;
-  background: rgba(8, 12, 19, 0.76);
-  backdrop-filter: blur(6px);
+  border: 1px solid rgba(176, 203, 236, 0.28);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 10% 8%, rgba(107, 155, 219, 0.25), transparent 52%),
+    rgba(7, 12, 22, 0.82);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
 }
 
 .dem-legend-title {
   font-size: 10px;
-  color: #d8e3f7;
+  color: #e6efff;
   line-height: 1.2;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+  font-weight: 600;
 }
 
 .dem-legend-body {
@@ -90,16 +95,17 @@
 .dem-legend-max,
 .dem-legend-min {
   font-size: 11px;
-  color: #eff5ff;
+  color: #f7fbff;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.28);
 }
 
 .dem-legend-scale {
-  width: 16px;
-  height: 108px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  width: 14px;
+  height: 104px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
   background: linear-gradient(
     to top,
     #2b8a3e 0%,
@@ -130,14 +136,14 @@
 
 .dem-sidebar-toggle-handle {
   position: absolute;
-  right: -13px;
+  right: -10px;
   top: 50%;
   transform: translateY(-50%);
-  width: 22px;
-  height: 54px;
+  width: 16px;
+  height: 40px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-left: none;
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 6px 6px 0;
   background: rgba(10, 14, 22, 0.95);
   color: #dbe4f6;
   display: inline-flex;
@@ -449,13 +455,13 @@
   .dem-sidebar-toggle-handle {
     left: 50%;
     right: auto;
-    top: -24px;
+    top: -18px;
     transform: translateX(-50%);
-    width: 56px;
-    height: 24px;
+    width: 42px;
+    height: 18px;
     border-left: 1px solid rgba(255, 255, 255, 0.16);
     border-bottom: none;
-    border-radius: 8px 8px 0 0;
+    border-radius: 7px 7px 0 0;
   }
 
   .dem-sidebar-body {
@@ -488,6 +494,22 @@
 
   .dem-sidebar.is-collapsed .dem-sidebar-body {
     display: none;
+  }
+
+  .dem-legend {
+    right: 12px;
+    bottom: 86px;
+    width: 74px;
+    padding: 7px 7px 9px;
+  }
+
+  .dem-legend-title {
+    font-size: 9px;
+  }
+
+  .dem-legend-scale {
+    height: 84px;
+    width: 12px;
   }
 }
 
