@@ -64,7 +64,6 @@ export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUplo
       title="DEM 업로드"
       destroyOnClose
       centered
-      width={720}
     >
       <div className="dem-upload-section">
         <Upload.Dragger {...uploadProps}>

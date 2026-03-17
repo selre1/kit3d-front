@@ -25,7 +25,7 @@ type DemSidebarProps = {
   downloading: boolean;
   rotating: boolean;
   profiling: boolean;
-  viewerMeta: string | null;
+  viewerMeta: string[] | null;
   onSelect: (item: DemItem) => void;
   onRefresh: () => void;
   onOpenUpload: () => void;
@@ -75,6 +75,10 @@ export function DemSidebar({
     () => items.find((item) => item.dem_id === selectedDemId) ?? null,
     [items, selectedDemId]
   );
+  const viewerMetaItems = useMemo(() => {
+    if (!viewerMeta) return [];
+    return viewerMeta.map((item) => item.trim()).filter(Boolean);
+  }, [viewerMeta]);
 
   const buildItemMenu = (item: DemItem): MenuProps => {
     const isTerrainReady = (item.terrain_status || "").toUpperCase() === "COMPLETED";
@@ -253,7 +257,11 @@ export function DemSidebar({
         <div className="dem-sidebar-tree">
           <div className="dem-tree-title">{selectedItem.file_name || selectedItem.dem_id}</div>
           <ul>
-            <li>{viewerMeta ? viewerMeta : "메타 정보 없음"}</li>
+            {viewerMetaItems.length ? (
+              viewerMetaItems.map((item, index) => <li key={`meta-${index}`}>{item}</li>)
+            ) : (
+              <li>메타 정보 없음</li>
+            )}
           </ul>
         </div>
       ) : null}

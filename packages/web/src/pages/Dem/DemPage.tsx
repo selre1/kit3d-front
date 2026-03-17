@@ -80,7 +80,7 @@ export function DemPage() {
   const [downloading, setDownloading] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
   const [profiling, setProfiling] = useState(false);
-  const [viewerMeta, setViewerMeta] = useState<string | null>(null);
+  const [viewerMeta, setViewerMeta] = useState<string[] | null>(null);
   const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
   const [profileResetKey, setProfileResetKey] = useState(0);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -246,7 +246,7 @@ export function DemPage() {
     }
   };
 
-  const handleMetaChange = useCallback((meta: string | null) => {
+  const handleMetaChange = useCallback((meta: string[] | null) => {
     setViewerMeta(meta);
   }, []);
 

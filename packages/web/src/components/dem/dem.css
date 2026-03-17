@@ -61,7 +61,7 @@
 .dem-profile-hint {
   position: absolute;
   z-index: 9;
-  transform: translate(0, calc(-100% - 8px));
+  transform: translate(0, calc(-100% - 5px));
   border-radius: 10px;
   padding: 6px 11px;
   font-size: 12px;

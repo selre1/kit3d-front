@@ -44,15 +44,12 @@ function sampleRaster(
   height: number,
   noDataValue: number | null
 ) {
-  //const stepX = Math.max(1, Math.ceil(width / MAX_GRID_SIZE));
-  //const stepY = Math.max(1, Math.ceil(height / MAX_GRID_SIZE));
+  const stepX = Math.max(1, Math.ceil(width / MAX_GRID_SIZE));
+  const stepY = Math.max(1, Math.ceil(height / MAX_GRID_SIZE));
 
-  //const sampledWidth = Math.floor((width - 1) / stepX) + 1;
-  //const sampledHeight = Math.floor((height - 1) / stepY) + 1;
-  const stepX = 1;
-const stepY = 1;
-const sampledWidth = width;
-const sampledHeight = height;
+  const sampledWidth = Math.floor((width - 1) / stepX) + 1;
+  const sampledHeight = Math.floor((height - 1) / stepY) + 1;
+
   const sampled = new Float32Array(sampledWidth * sampledHeight);
 
   const isNoData = (value: number) =>
@@ -200,8 +197,8 @@ function buildDemAttributes(
 
   const elevationRange = Math.max(maxElevation - minElevation, 1);
   const heightScale = 0.02;
-  const verticalExaggeration = 15.0;
-  const elevationGamma = 1.0;
+  const verticalExaggeration = 30.0;
+  const elevationGamma = 1.5;
 
   const lowColor = new THREE.Color(0x2b8a3e);
   const midColor = new THREE.Color(0xd9c27a);

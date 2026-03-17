@@ -16,7 +16,7 @@ type DemViewportProps = {
   autoRotate?: boolean;
   profileEnabled?: boolean;
   profileResetKey?: number;
-  onMetaChange?: (meta: string | null) => void;
+  onMetaChange?: (meta: string[] | null) => void;
   onProfileChange?: (profile: DemProfileResult | null) => void;
 };
 
@@ -368,15 +368,15 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
   const zValues = new Float32Array(workerResult.zValues);
   const colors = new Float32Array(workerResult.colors);
   const terrain = createDemMesh(workerResult.width, workerResult.height, zValues, colors);
-  const metaText = [
-    `크기 ${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
-    `CRS ${workerResult.crs || "알 수 없음"}`,
-    `해상도 ${workerResult.resolutionXMeter.toFixed(2)}m x ${workerResult.resolutionYMeter.toFixed(2)}m`,
-  ].join(" · ");
+  const metaItems = [
+    `SIZE: ${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
+    `CRS : ${workerResult.crs || "알 수 없음"}`,
+    `GSD : ${workerResult.resolutionXMeter.toFixed(2)}m x ${workerResult.resolutionYMeter.toFixed(2)}m`,
+  ];
 
   return {
     terrain,
-    sourceMeta: metaText,
+    sourceMeta: metaItems,
     minElevation: workerResult.minElevation,
     maxElevation: workerResult.maxElevation,
     grid: {
