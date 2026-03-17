@@ -3,15 +3,41 @@
   width: 100%;
   height: 100%;
   min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+}
+
+.dem-layout {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  overflow: hidden;
+  background: #bfbfbf;
+}
+
+.dem-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
-.dem-stage {
+.dem-main-viewport {
   position: relative;
-  width: 100%;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden;
-  background: #bfbfbf;
+}
+
+.dem-main-profile {
+  flex: 0 0 auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 12, 20, 0.9);
 }
 
 .dem-viewport {
@@ -133,21 +159,21 @@
   );
 }
 .dem-sidebar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
+  position: relative;
+  flex: 0 0 352px;
   width: 352px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: rgba(9, 13, 22, 0.92);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
-  z-index: 5;
-  transition: width 0.2s ease;
+  z-index: 3;
+  transition: width 0.2s ease, flex-basis 0.2s ease;
 }
 
 .dem-sidebar.is-collapsed {
+  flex-basis: 60px;
   width: 60px;
 }
 
@@ -449,18 +475,18 @@
 }
 
 .dem-profile-panel {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  width: 420px;
-  max-width: calc(100% - 88px);
-  z-index: 6;
-  pointer-events: none;
+  position: relative;
+  width: 100%;
+  max-width: none;
+  z-index: 1;
+  pointer-events: auto;
+  padding: 8px 12px 10px;
+  border-radius: 0;
 }
 
 .dem-profile-card {
   pointer-events: auto;
-  border-radius: 14px !important;
+  border-radius: 0 !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   background: linear-gradient(
       165deg,
@@ -474,8 +500,8 @@
 
 .dem-profile-card .ant-card-head {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  min-height: 44px;
-  padding: 0 12px;
+  min-height: 40px;
+  padding: 0 10px;
 }
 
 .dem-profile-card .ant-card-head-title,
@@ -488,7 +514,7 @@
 }
 
 .dem-profile-card .ant-card-body {
-  padding: 10px 12px 12px;
+  padding: 8px 10px 10px;
 }
 
 .dem-profile-card .ant-btn:hover {
@@ -499,24 +525,24 @@
 .dem-profile-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .dem-profile-stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .dem-profile-stats .ant-statistic {
-  padding: 6px 8px;
+  padding: 4px 6px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(11, 17, 29, 0.54);
 }
 
 .dem-profile-stats .ant-statistic-content {
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .dem-profile-endpoints {
@@ -547,8 +573,8 @@
 .dem-profile-chart {
   position: relative;
   cursor: crosshair;
-  height: 186px;
-  padding: 8px 8px 22px 32px;
+  height: 148px;
+  padding: 6px 6px 18px 24px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
@@ -643,21 +669,39 @@
 
 @media (max-width: 1200px) {
   .dem-sidebar {
+    flex-basis: 312px;
     width: 312px;
   }
 
   .dem-sidebar.is-collapsed {
+    flex-basis: 56px;
     width: 56px;
   }
 }
 
 @media (max-width: 900px) {
+  .dem-layout {
+    flex-direction: column;
+  }
+
+  .dem-main {
+    order: 1;
+    min-height: 0;
+  }
+
+  .dem-main-profile {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
   .dem-sidebar,
   .dem-sidebar.is-collapsed {
+    order: 2;
+    position: relative;
+    flex-basis: auto;
     width: 100%;
+    height: auto;
     max-height: 64%;
     min-height: 320px;
-    top: auto;
     border-right: none;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
@@ -727,12 +771,10 @@
   }
 
   .dem-profile-panel {
-    right: 10px;
-    left: 10px;
-    bottom: 76px;
-    width: auto;
-    max-width: none;
-  }
+    width: 100%;
+    padding: 6px 8px 8px;
+    border-radius: 0;
+}
 
   .dem-profile-card .ant-card-head,
   .dem-profile-stats,
@@ -747,7 +789,7 @@
   }
 
   .dem-profile-chart {
-    height: 130px;
+    height: 120px;
     padding: 4px;
     border-radius: 8px;
   }
@@ -758,7 +800,6 @@
     max-width: 72vw;
   }
 }
-
 .dem-item-dropdown .ant-dropdown-menu {
   background: rgba(14, 19, 30, 0.98);
   border: 1px solid rgba(255, 255, 255, 0.16);

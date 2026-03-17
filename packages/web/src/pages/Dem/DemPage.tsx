@@ -265,17 +265,7 @@ export function DemPage() {
 
   return (
     <div className="dem-page-full">
-      <div className="dem-stage">
-        <DemViewport
-          seedKey={selectedDem?.dem_id || null}
-          source={selectedViewerSource}
-          autoRotate={autoRotate}
-          profileEnabled={profiling}
-          profileResetKey={profileResetKey}
-          onMetaChange={handleMetaChange}
-          onProfileChange={setProfileResult}
-          onProfileHoverHandlerReady={handleProfileHoverHandlerReady}
-        />
+      <div className="dem-layout">
         <DemSidebar
           items={demItems}
           selectedDemId={selectedDemId}
@@ -296,20 +286,43 @@ export function DemPage() {
           onDownloadTifItem={handleDownloadTifItem}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         />
-        {profiling || profileResult ? (
-          <DemProfilePanel
-            enabled={profiling}
-            profile={profileResult}
-            onClear={() => {
-              setProfileResult(null);
-              setProfileResetKey((prev) => prev + 1);
-              profileHoverHandlerRef.current(null);
-            }}
-            onHoverRatioChange={handleProfileHoverRatioChange}
-          />
-        ) : null}
-      </div>
 
+        <div className="dem-main">
+          <div className="dem-main-viewport">
+            <DemViewport
+              seedKey={selectedDem?.dem_id || null}
+              source={selectedViewerSource}
+              autoRotate={autoRotate}
+              profileEnabled={profiling}
+              profileResetKey={profileResetKey}
+              onMetaChange={handleMetaChange}
+              onProfileChange={setProfileResult}
+              onProfileHoverHandlerReady={handleProfileHoverHandlerReady}
+            />
+          </div>
+
+          {profiling || profileResult ? (
+            <div className="dem-main-profile">
+              <DemProfilePanel
+                enabled={profiling}
+                profile={profileResult}
+                onClose={() => {
+                  setProfiling(false);
+                  setProfileResult(null);
+                  setProfileResetKey((prev) => prev + 1);
+                  profileHoverHandlerRef.current(null);
+                }}
+                onClear={() => {
+                  setProfileResult(null);
+                  setProfileResetKey((prev) => prev + 1);
+                  profileHoverHandlerRef.current(null);
+                }}
+                onHoverRatioChange={handleProfileHoverRatioChange}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
       <DemUploadModal
         open={uploadModalOpen}
         submitting={uploading}

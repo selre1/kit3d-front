@@ -57,6 +57,7 @@ export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUplo
       open={open}
       onCancel={onCancel}
       onOk={handleSubmit}
+      width="auto"
       okText="업로드"
       cancelText="취소"
       okButtonProps={{ disabled: !canSubmit, loading: submitting }}

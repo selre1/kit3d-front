@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Card, Empty, Space, Statistic, Typography } from "antd";
-import { DeleteOutlined, LineChartOutlined } from "@ant-design/icons";
+import { CloseOutlined, DeleteOutlined, LineChartOutlined } from "@ant-design/icons";
 
 import type { DemProfileResult } from "./types";
 
@@ -10,6 +10,7 @@ type DemProfilePanelProps = {
   enabled: boolean;
   profile: DemProfileResult | null;
   onClear: () => void;
+  onClose?: () => void;
   onHoverRatioChange?: (ratio: number | null) => void;
 };
 
@@ -76,6 +77,7 @@ export function DemProfilePanel({
   enabled,
   profile,
   onClear,
+  onClose,
   onHoverRatioChange,
 }: DemProfilePanelProps) {
   const chartWidth = 360;
@@ -83,6 +85,7 @@ export function DemProfilePanel({
   const padX = 24;
   const padY = 16;
   const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const chartSvgRef = useRef<SVGSVGElement | null>(null);
   const hoverFrameRef = useRef<number>(0);
   const pendingClientXRef = useRef<number | null>(null);
   const hoverSampleIndexRef = useRef<number | null>(null);
@@ -126,22 +129,25 @@ export function DemProfilePanel({
   const resolveSampleIndexByClientX = useCallback(
     (clientX: number) => {
       if (!profile) return null;
-      const chart = chartSurfaceRef.current;
-      if (!chart) return null;
+      const chartSvg = chartSvgRef.current;
+      if (!chartSvg) return null;
 
-      const rect = chart.getBoundingClientRect();
-      if (rect.width <= 0) return null;
-
-      const innerWidth = rect.width - padX * 2;
-      if (innerWidth <= 0) return null;
+      const rect = chartSvg.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return null;
 
       const localX = clientX - rect.left;
-      if (localX < padX || localX > rect.width - padX) return null;
+      if (localX < 0 || localX > rect.width) return null;
 
-      const ratio = clamp((localX - padX) / innerWidth, 0, 1);
+      const chartX = (localX / rect.width) * chartWidth;
+      if (chartX < padX || chartX > chartWidth - padX) return null;
+
+      const innerWidth = chartWidth - padX * 2;
+      if (innerWidth <= 0) return null;
+
+      const ratio = clamp((chartX - padX) / innerWidth, 0, 1);
       return getSampleIndexByRatio(ratio, profile.samples.length);
     },
-    [profile, padX]
+    [profile, padX, chartWidth]
   );
 
   const handleChartPointerMove = useCallback(
@@ -224,6 +230,15 @@ export function DemProfilePanel({
             >
               초기화
             </Button>
+            <Button
+              size="small"
+              type="text"
+              icon={<CloseOutlined />}
+              onClick={onClose}
+              aria-label="close-profile-panel"
+            >
+              닫기
+            </Button>
           </Space>
         }
       >
@@ -261,13 +276,14 @@ export function DemProfilePanel({
             <div
               ref={chartSurfaceRef}
               className="dem-profile-chart"
-              onPointerMove={(event) => handleChartPointerMove(event.clientX)}
-              onPointerLeave={handleChartPointerLeave}
             >
               <svg
+                ref={chartSvgRef}
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                 preserveAspectRatio="none"
                 aria-label="dem-elevation-profile"
+                onPointerMove={(event) => handleChartPointerMove(event.clientX)}
+                onPointerLeave={handleChartPointerLeave}
               >
                 <defs>
                   <linearGradient id="demProfileAreaGradient" x1="0" y1="0" x2="0" y2="1">
