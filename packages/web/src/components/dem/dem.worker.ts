@@ -13,6 +13,7 @@ type WorkerSuccess = {
   sourceHeight: number;
   minElevation: number;
   maxElevation: number;
+  crs: string;
   resolutionXMeter: number;
   resolutionYMeter: number;
   elevations: ArrayBuffer;
@@ -151,6 +152,39 @@ function resolveMetersPerPixel(tifImage: any) {
   return toMetersIfDegrees(scaleX, scaleY, latCenter, isGeographic);
 }
 
+function resolveCrs(tifImage: any) {
+  const geoKeys = (tifImage.getGeoKeys?.() || {}) as Record<string, unknown>;
+
+  const projected =
+    Number(geoKeys.ProjectedCSTypeGeoKey) ||
+    Number(geoKeys.ProjectedCRSGeoKey) ||
+    Number.NaN;
+  if (Number.isFinite(projected) && projected > 0 && projected !== 32767) {
+    return `EPSG:${Math.trunc(projected)}`;
+  }
+
+  const geographic =
+    Number(geoKeys.GeographicTypeGeoKey) ||
+    Number(geoKeys.GeodeticCRSGeoKey) ||
+    Number.NaN;
+  if (Number.isFinite(geographic) && geographic > 0 && geographic !== 32767) {
+    return `EPSG:${Math.trunc(geographic)}`;
+  }
+
+  const citationKeys = [
+    geoKeys.GTCitationGeoKey,
+    geoKeys.GeogCitationGeoKey,
+    geoKeys.PCSCitationGeoKey,
+  ];
+  for (const citation of citationKeys) {
+    if (typeof citation === "string" && citation.trim()) {
+      return citation.trim();
+    }
+  }
+
+  return "알 수 없음";
+}
+
 function buildDemAttributes(
   sampled: Float32Array,
   minElevation: number,
@@ -206,6 +240,7 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
 
   const noDataValue = parseNoDataValue(tifImage.getGDALNoData());
   const sampledData = sampleRaster(raster, sourceWidth, sourceHeight, noDataValue);
+  const crs = resolveCrs(tifImage);
   const metersPerPixel = resolveMetersPerPixel(tifImage);
   const resolutionXMeter = Math.max(0.01, metersPerPixel.x * sampledData.stepX);
   const resolutionYMeter = Math.max(0.01, metersPerPixel.y * sampledData.stepY);
@@ -223,6 +258,7 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
     sourceHeight,
     minElevation: sampledData.minElevation,
     maxElevation: sampledData.maxElevation,
+    crs,
     resolutionXMeter,
     resolutionYMeter,
     elevations: sampledData.sampled.buffer,

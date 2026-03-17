@@ -28,6 +28,7 @@ type DemWorkerSuccess = {
   sourceHeight: number;
   minElevation: number;
   maxElevation: number;
+  crs: string;
   resolutionXMeter: number;
   resolutionYMeter: number;
   elevations: ArrayBuffer;
@@ -347,10 +348,15 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
   const zValues = new Float32Array(workerResult.zValues);
   const colors = new Float32Array(workerResult.colors);
   const terrain = createDemMesh(workerResult.width, workerResult.height, zValues, colors);
+  const metaText = [
+    `크기 ${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
+    `CRS ${workerResult.crs || "알 수 없음"}`,
+    `해상도 ${workerResult.resolutionXMeter.toFixed(2)}m x ${workerResult.resolutionYMeter.toFixed(2)}m`,
+  ].join(" · ");
 
   return {
     terrain,
-    sourceMeta: `${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
+    sourceMeta: metaText,
     minElevation: workerResult.minElevation,
     maxElevation: workerResult.maxElevation,
     grid: {
