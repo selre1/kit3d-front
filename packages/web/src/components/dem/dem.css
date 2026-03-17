@@ -51,9 +51,8 @@
 
 
 .dem-error {
-  left: 14px;
+  top: 14px;
   right: 14px;
-  bottom: 50px;
   background: rgba(126, 24, 24, 0.72);
   border: 1px solid rgba(255, 145, 145, 0.45);
   color: #ffe2e2;

@@ -26,7 +26,7 @@ type WorkerFailure = {
   error: string;
 };
 
-const MAX_GRID_SIZE = 1;
+const MAX_GRID_SIZE = 1024;
 
 function parseNoDataValue(raw: unknown): number | null {
   if (raw === null || raw === undefined) return null;
@@ -44,11 +44,15 @@ function sampleRaster(
   height: number,
   noDataValue: number | null
 ) {
-  const stepX = Math.max(1, Math.ceil(width / MAX_GRID_SIZE));
-  const stepY = Math.max(1, Math.ceil(height / MAX_GRID_SIZE));
+  //const stepX = Math.max(1, Math.ceil(width / MAX_GRID_SIZE));
+  //const stepY = Math.max(1, Math.ceil(height / MAX_GRID_SIZE));
 
-  const sampledWidth = Math.floor((width - 1) / stepX) + 1;
-  const sampledHeight = Math.floor((height - 1) / stepY) + 1;
+  //const sampledWidth = Math.floor((width - 1) / stepX) + 1;
+  //const sampledHeight = Math.floor((height - 1) / stepY) + 1;
+  const stepX = 1;
+const stepY = 1;
+const sampledWidth = width;
+const sampledHeight = height;
   const sampled = new Float32Array(sampledWidth * sampledHeight);
 
   const isNoData = (value: number) =>
