@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { message } from "antd";
 
 import {
@@ -82,6 +82,7 @@ export function DemPage() {
   const [profiling, setProfiling] = useState(false);
   const [viewerMeta, setViewerMeta] = useState<string[] | null>(null);
   const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
+  const profileHoverHandlerRef = useRef<(ratio: number | null) => void>(() => {});
   const [profileResetKey, setProfileResetKey] = useState(0);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -128,6 +129,7 @@ export function DemPage() {
   useEffect(() => {
     setProfileResult(null);
     setProfileResetKey((prev) => prev + 1);
+    profileHoverHandlerRef.current(null);
   }, [selectedDemId]);
 
   useEffect(() => {
@@ -250,6 +252,17 @@ export function DemPage() {
     setViewerMeta(meta);
   }, []);
 
+  const handleProfileHoverHandlerReady = useCallback(
+    (handler: (ratio: number | null) => void) => {
+      profileHoverHandlerRef.current = handler;
+    },
+    []
+  );
+
+  const handleProfileHoverRatioChange = useCallback((ratio: number | null) => {
+    profileHoverHandlerRef.current(ratio);
+  }, []);
+
   return (
     <div className="dem-page-full">
       <div className="dem-stage">
@@ -261,6 +274,7 @@ export function DemPage() {
           profileResetKey={profileResetKey}
           onMetaChange={handleMetaChange}
           onProfileChange={setProfileResult}
+          onProfileHoverHandlerReady={handleProfileHoverHandlerReady}
         />
         <DemSidebar
           items={demItems}
@@ -289,7 +303,9 @@ export function DemPage() {
             onClear={() => {
               setProfileResult(null);
               setProfileResetKey((prev) => prev + 1);
+              profileHoverHandlerRef.current(null);
             }}
+            onHoverRatioChange={handleProfileHoverRatioChange}
           />
         ) : null}
       </div>

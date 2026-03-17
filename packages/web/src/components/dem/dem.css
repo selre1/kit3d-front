@@ -1,4 +1,4 @@
-﻿.dem-page-full {
+.dem-page-full {
   position: relative;
   width: 100%;
   height: 100%;
@@ -546,6 +546,7 @@
 
 .dem-profile-chart {
   position: relative;
+  cursor: crosshair;
   height: 186px;
   padding: 8px 8px 22px 32px;
   border-radius: 10px;
@@ -577,6 +578,33 @@
   stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.dem-profile-hover-line {
+  stroke: rgba(170, 208, 255, 0.9);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 4;
+}
+
+.dem-profile-hover-point {
+  fill: #f2f8ff;
+  stroke: #75b2ff;
+  stroke-width: 2;
+}
+
+.dem-profile-hover-readout {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(117, 178, 255, 0.5);
+  background: rgba(8, 14, 24, 0.86);
+  color: #d9eaff;
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 .dem-profile-label {
@@ -709,7 +737,8 @@
   .dem-profile-card .ant-card-head,
   .dem-profile-stats,
   .dem-profile-endpoints,
-  .dem-profile-label {
+  .dem-profile-label,
+  .dem-profile-hover-readout {
     display: none;
   }
 

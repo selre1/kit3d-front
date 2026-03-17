@@ -18,6 +18,7 @@ type DemViewportProps = {
   profileResetKey?: number;
   onMetaChange?: (meta: string[] | null) => void;
   onProfileChange?: (profile: DemProfileResult | null) => void;
+  onProfileHoverHandlerReady?: (handler: (ratio: number | null) => void) => void;
 };
 
 type DemWorkerSuccess = {
@@ -211,21 +212,36 @@ function ensureMarker(
   return markerRef.current;
 }
 
+function setMarkerAtLocalPoint(
+  markerRef: MutableRefObject<THREE.Mesh | null>,
+  localPoint: DemLocalPoint,
+  grid: DemGridData | null,
+  terrain: THREE.Mesh | null,
+  lift: number
+) {
+  const marker = markerRef.current;
+  if (!marker || !grid || !terrain) return;
+  const local = new THREE.Vector3(
+    localPoint.x,
+    localPoint.y,
+    sampleSurfaceZ(localPoint, grid) + lift
+  );
+  marker.position.copy(terrain.localToWorld(local));
+  marker.visible = true;
+}
+
 function setMarkerAtPick(
   markerRef: MutableRefObject<THREE.Mesh | null>,
   pick: DemProfilePick,
   grid: DemGridData | null,
   terrain: THREE.Mesh | null
 ) {
-  const marker = markerRef.current;
-  if (!marker || !grid || !terrain) return;
-  const local = new THREE.Vector3(
-    pick.local.x,
-    pick.local.y,
-    sampleSurfaceZ(pick.local, grid) + PROFILE_LIFT + 0.7
-  );
-  marker.position.copy(terrain.localToWorld(local));
-  marker.visible = true;
+  setMarkerAtLocalPoint(markerRef, pick.local, grid, terrain, PROFILE_LIFT + 0.7);
+}
+
+function hideMarker(markerRef: MutableRefObject<THREE.Mesh | null>) {
+  if (!markerRef.current) return;
+  markerRef.current.visible = false;
 }
 
 function clearProfileVisuals(
@@ -233,7 +249,8 @@ function clearProfileVisuals(
   mainLineRef: MutableRefObject<THREE.Line | null>,
   guideLineRef: MutableRefObject<THREE.Line | null>,
   startMarkerRef: MutableRefObject<THREE.Mesh | null>,
-  endMarkerRef: MutableRefObject<THREE.Mesh | null>
+  endMarkerRef: MutableRefObject<THREE.Mesh | null>,
+  hoverMarkerRef: MutableRefObject<THREE.Mesh | null>
 ) {
   if (!scene) return;
 
@@ -259,6 +276,12 @@ function clearProfileVisuals(
     scene.remove(endMarkerRef.current);
     disposeMarker(endMarkerRef.current);
     endMarkerRef.current = null;
+  }
+
+  if (hoverMarkerRef.current) {
+    scene.remove(hoverMarkerRef.current);
+    disposeMarker(hoverMarkerRef.current);
+    hoverMarkerRef.current = null;
   }
 }
 
@@ -406,6 +429,7 @@ export function DemViewport({
   profileResetKey = 0,
   onMetaChange,
   onProfileChange,
+  onProfileHoverHandlerReady,
 }: DemViewportProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -419,6 +443,7 @@ export function DemViewport({
   const profileGuideLineRef = useRef<THREE.Line | null>(null);
   const profileStartMarkerRef = useRef<THREE.Mesh | null>(null);
   const profileEndMarkerRef = useRef<THREE.Mesh | null>(null);
+  const profileHoverMarkerRef = useRef<THREE.Mesh | null>(null);
   const profileStartRef = useRef<DemProfilePick | null>(null);
   const profileEndRef = useRef<DemProfilePick | null>(null);
   const pointerDownRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
@@ -525,7 +550,8 @@ export function DemViewport({
         profileLineRef,
         profileGuideLineRef,
         profileStartMarkerRef,
-        profileEndMarkerRef
+        profileEndMarkerRef,
+        profileHoverMarkerRef
       );
 
       controls.dispose();
@@ -565,12 +591,13 @@ export function DemViewport({
     lastHintRef.current = null;
 
     clearProfileVisuals(
-      scene,
-      profileLineRef,
-      profileGuideLineRef,
-      profileStartMarkerRef,
-      profileEndMarkerRef
-    );
+        scene,
+        profileLineRef,
+        profileGuideLineRef,
+        profileStartMarkerRef,
+        profileEndMarkerRef,
+        profileHoverMarkerRef
+      );
 
     if (!source) {
       setLoading(false);
@@ -630,12 +657,13 @@ export function DemViewport({
     onProfileChange?.(null);
 
     clearProfileVisuals(
-      scene,
-      profileLineRef,
-      profileGuideLineRef,
-      profileStartMarkerRef,
-      profileEndMarkerRef
-    );
+        scene,
+        profileLineRef,
+        profileGuideLineRef,
+        profileStartMarkerRef,
+        profileEndMarkerRef,
+        profileHoverMarkerRef
+      );
 
     setProfileHint((current) => {
       if (!profileEnabled || !current) return null;
@@ -648,6 +676,50 @@ export function DemViewport({
   }, [profileResetKey, profileEnabled, onProfileChange]);
 
   useEffect(() => {
+    if (!onProfileHoverHandlerReady) return;
+
+    const handler = (ratio: number | null) => {
+      const scene = sceneRef.current;
+      const terrain = terrainRef.current;
+      const grid = gridDataRef.current;
+      const start = profileStartRef.current;
+      const end = profileEndRef.current;
+
+      if (
+        ratio === null ||
+        !scene ||
+        !terrain ||
+        !grid ||
+        !start ||
+        !end ||
+        !Number.isFinite(ratio)
+      ) {
+        hideMarker(profileHoverMarkerRef);
+        return;
+      }
+
+      const hoverMarker = ensureMarker(scene, profileHoverMarkerRef, 0xe6f4ff);
+      if (!hoverMarker) {
+        return;
+      }
+
+      const clampedRatio = clamp(ratio, 0, 1);
+      const localPoint: DemLocalPoint = {
+        x: start.local.x + (end.local.x - start.local.x) * clampedRatio,
+        y: start.local.y + (end.local.y - start.local.y) * clampedRatio,
+      };
+
+      setMarkerAtLocalPoint(profileHoverMarkerRef, localPoint, grid, terrain, PROFILE_LIFT + 1.1);
+    };
+
+    onProfileHoverHandlerReady(handler);
+
+    return () => {
+      onProfileHoverHandlerReady(() => {});
+    };
+  }, [onProfileHoverHandlerReady]);
+
+  useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
 
@@ -656,6 +728,7 @@ export function DemViewport({
       lastHintRef.current = null;
       pointerDownRef.current = null;
       pendingMoveRef.current = null;
+      hideMarker(profileHoverMarkerRef);
       return;
     }
 
@@ -791,6 +864,7 @@ export function DemViewport({
         onProfileChange?.(null);
         hideLine(profileLineRef.current);
         hideLine(profileGuideLineRef.current);
+        hideMarker(profileHoverMarkerRef);
 
         const startMarker = ensureMarker(scene, profileStartMarkerRef, 0x2f87ff);
         const endMarker = ensureMarker(scene, profileEndMarkerRef, 0xffa940);

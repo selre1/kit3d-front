@@ -1,4 +1,5 @@
-import { Button, Card, Empty, Space, Statistic, Tag, Typography } from "antd";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button, Card, Empty, Space, Statistic, Typography } from "antd";
 import { DeleteOutlined, LineChartOutlined } from "@ant-design/icons";
 
 import type { DemProfileResult } from "./types";
@@ -9,11 +10,39 @@ type DemProfilePanelProps = {
   enabled: boolean;
   profile: DemProfileResult | null;
   onClear: () => void;
+  onHoverRatioChange?: (ratio: number | null) => void;
 };
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
 
 function formatValue(value: number, digits = 1) {
   if (!Number.isFinite(value)) return "-";
   return value.toFixed(digits);
+}
+
+function getSampleIndexByRatio(ratio: number, sampleCount: number) {
+  if (!Number.isFinite(ratio) || sampleCount <= 0) return null;
+  return clamp(Math.round(ratio * (sampleCount - 1)), 0, sampleCount - 1);
+}
+
+function getChartPoint(
+  profile: DemProfileResult,
+  ratio: number,
+  elevation: number,
+  width: number,
+  height: number,
+  padX: number,
+  padY: number
+) {
+  const innerWidth = width - padX * 2;
+  const innerHeight = height - padY * 2;
+  const range = Math.max(profile.maxElevation - profile.minElevation, 0.0001);
+  const x = padX + ratio * innerWidth;
+  const normalized = (elevation - profile.minElevation) / range;
+  const y = padY + (1 - normalized) * innerHeight;
+  return { x, y };
 }
 
 function buildLinePath(
@@ -23,16 +52,10 @@ function buildLinePath(
   padX: number,
   padY: number
 ) {
-  const innerWidth = width - padX * 2;
-  const innerHeight = height - padY * 2;
-  const range = Math.max(profile.maxElevation - profile.minElevation, 0.0001);
-
   return profile.samples
     .map((sample, index) => {
-      const x = padX + sample.ratio * innerWidth;
-      const normalized = (sample.elevation - profile.minElevation) / range;
-      const y = padY + (1 - normalized) * innerHeight;
-      return `${index === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
+      const point = getChartPoint(profile, sample.ratio, sample.elevation, width, height, padX, padY);
+      return `${index === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
     })
     .join(" ");
 }
@@ -49,17 +72,135 @@ function buildAreaPath(
   return `${linePath} L ${width - padX} ${bottomY} L ${padX} ${bottomY} Z`;
 }
 
-export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelProps) {
+export function DemProfilePanel({
+  enabled,
+  profile,
+  onClear,
+  onHoverRatioChange,
+}: DemProfilePanelProps) {
   const chartWidth = 360;
   const chartHeight = 180;
   const padX = 24;
   const padY = 16;
+  const chartSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const hoverFrameRef = useRef<number>(0);
+  const pendingClientXRef = useRef<number | null>(null);
+  const hoverSampleIndexRef = useRef<number | null>(null);
+  const [hoverSampleIndex, setHoverSampleIndex] = useState<number | null>(null);
+
   const linePath = profile
     ? buildLinePath(profile, chartWidth, chartHeight, padX, padY)
     : "";
   const areaPath = profile
     ? buildAreaPath(profile, chartWidth, chartHeight, padX, padY)
     : "";
+
+  const applyHoverSampleIndex = useCallback(
+    (nextIndex: number | null) => {
+      const resolvedIndex =
+        profile && nextIndex !== null
+          ? clamp(nextIndex, 0, profile.samples.length - 1)
+          : null;
+
+      if (hoverSampleIndexRef.current === resolvedIndex) {
+        return;
+      }
+
+      hoverSampleIndexRef.current = resolvedIndex;
+      setHoverSampleIndex(resolvedIndex);
+
+      if (!onHoverRatioChange) {
+        return;
+      }
+
+      if (!profile || resolvedIndex === null) {
+        onHoverRatioChange(null);
+        return;
+      }
+
+      onHoverRatioChange(profile.samples[resolvedIndex]?.ratio ?? null);
+    },
+    [onHoverRatioChange, profile]
+  );
+
+  const resolveSampleIndexByClientX = useCallback(
+    (clientX: number) => {
+      if (!profile) return null;
+      const chart = chartSurfaceRef.current;
+      if (!chart) return null;
+
+      const rect = chart.getBoundingClientRect();
+      if (rect.width <= 0) return null;
+
+      const innerWidth = rect.width - padX * 2;
+      if (innerWidth <= 0) return null;
+
+      const localX = clientX - rect.left;
+      if (localX < padX || localX > rect.width - padX) return null;
+
+      const ratio = clamp((localX - padX) / innerWidth, 0, 1);
+      return getSampleIndexByRatio(ratio, profile.samples.length);
+    },
+    [profile, padX]
+  );
+
+  const handleChartPointerMove = useCallback(
+    (clientX: number) => {
+      pendingClientXRef.current = clientX;
+      if (hoverFrameRef.current) {
+        return;
+      }
+
+      hoverFrameRef.current = window.requestAnimationFrame(() => {
+        hoverFrameRef.current = 0;
+        const pendingClientX = pendingClientXRef.current;
+        if (pendingClientX === null) return;
+
+        const nextIndex = resolveSampleIndexByClientX(pendingClientX);
+        applyHoverSampleIndex(nextIndex);
+      });
+    },
+    [applyHoverSampleIndex, resolveSampleIndexByClientX]
+  );
+
+  const handleChartPointerLeave = useCallback(() => {
+    pendingClientXRef.current = null;
+    if (hoverFrameRef.current) {
+      window.cancelAnimationFrame(hoverFrameRef.current);
+      hoverFrameRef.current = 0;
+    }
+    applyHoverSampleIndex(null);
+  }, [applyHoverSampleIndex]);
+
+  useEffect(() => {
+    if (!enabled || !profile) {
+      applyHoverSampleIndex(null);
+    }
+  }, [enabled, profile, applyHoverSampleIndex]);
+
+  useEffect(() => {
+    return () => {
+      if (hoverFrameRef.current) {
+        window.cancelAnimationFrame(hoverFrameRef.current);
+        hoverFrameRef.current = 0;
+      }
+    };
+  }, []);
+
+  const hoverSample =
+    profile && hoverSampleIndex !== null ? profile.samples[hoverSampleIndex] ?? null : null;
+  const hoverPoint =
+    profile && hoverSample
+      ? getChartPoint(
+          profile,
+          hoverSample.ratio,
+          hoverSample.elevation,
+          chartWidth,
+          chartHeight,
+          padX,
+          padY
+        )
+      : null;
 
   return (
     <div className="dem-profile-panel">
@@ -117,7 +258,12 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
               </span>
             </div>
 
-            <div className="dem-profile-chart">
+            <div
+              ref={chartSurfaceRef}
+              className="dem-profile-chart"
+              onPointerMove={(event) => handleChartPointerMove(event.clientX)}
+              onPointerLeave={handleChartPointerLeave}
+            >
               <svg
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                 preserveAspectRatio="none"
@@ -145,6 +291,23 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
                 />
                 <path d={areaPath} className="dem-profile-area" />
                 <path d={linePath} className="dem-profile-line" />
+                {hoverPoint ? (
+                  <>
+                    <line
+                      x1={hoverPoint.x}
+                      y1={padY}
+                      x2={hoverPoint.x}
+                      y2={chartHeight - padY}
+                      className="dem-profile-hover-line"
+                    />
+                    <circle
+                      cx={hoverPoint.x}
+                      cy={hoverPoint.y}
+                      r={4.2}
+                      className="dem-profile-hover-point"
+                    />
+                  </>
+                ) : null}
               </svg>
               <div className="dem-profile-label dem-profile-label-max">
                 {formatValue(profile.maxElevation)} m
@@ -152,8 +315,9 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
               <div className="dem-profile-label dem-profile-label-min">
                 {formatValue(profile.minElevation)} m
               </div>
-              <div className="dem-profile-label dem-profile-label-start">시작점</div>
-              <div className="dem-profile-label dem-profile-label-end">끝점</div>
+              {hoverSample ? (
+                <div className="dem-profile-hover-readout">{formatValue(hoverSample.elevation)} m</div>
+              ) : null}
             </div>
           </div>
         ) : (
