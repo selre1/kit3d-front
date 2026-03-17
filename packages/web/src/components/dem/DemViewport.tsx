@@ -56,6 +56,7 @@ type ProfileHintState = {
 
 const PROFILE_LIFT = 1.4;
 const CLICK_MOVE_THRESHOLD = 6;
+const HINT_MIN_MOVE_PX = 2;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -162,7 +163,20 @@ function ensureProfileLine(
 
 function setLinePositions(line: THREE.Line | null, positions: Float32Array) {
   if (!line) return;
-  line.geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const current = line.geometry.getAttribute("position") as THREE.BufferAttribute | undefined;
+  if (
+    current &&
+    current.itemSize === 3 &&
+    current.array instanceof Float32Array &&
+    current.array.length === positions.length
+  ) {
+    if (current.array !== positions) {
+      (current.array as Float32Array).set(positions);
+    }
+    current.needsUpdate = true;
+  } else {
+    line.geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  }
   line.geometry.computeBoundingSphere();
   line.visible = true;
 }
@@ -279,8 +293,14 @@ function buildTerrainLinePositions(
   return positions;
 }
 
-function buildGuideLinePositions(start: THREE.Vector3, end: THREE.Vector3) {
-  return new Float32Array([start.x, start.y + PROFILE_LIFT, start.z, end.x, end.y + PROFILE_LIFT, end.z]);
+function fillGuideLinePositions(buffer: Float32Array, start: THREE.Vector3, end: THREE.Vector3) {
+  buffer[0] = start.x;
+  buffer[1] = start.y + PROFILE_LIFT;
+  buffer[2] = start.z;
+  buffer[3] = end.x;
+  buffer[4] = end.y + PROFILE_LIFT;
+  buffer[5] = end.z;
+  return buffer;
 }
 
 async function readSourceArrayBuffer(source: DemViewerSource, signal: AbortSignal) {
@@ -402,6 +422,12 @@ export function DemViewport({
   const profileStartRef = useRef<DemProfilePick | null>(null);
   const profileEndRef = useRef<DemProfilePick | null>(null);
   const pointerDownRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
+  const pointerRef = useRef<THREE.Vector2>(new THREE.Vector2());
+  const guidePositionsRef = useRef<Float32Array>(new Float32Array(6));
+  const moveFrameRef = useRef<number>(0);
+  const pendingMoveRef = useRef<{ x: number; y: number; buttons: number } | null>(null);
+  const lastHintRef = useRef<ProfileHintState | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
@@ -483,6 +509,10 @@ export function DemViewport({
     return () => {
       resizeObserver.disconnect();
       window.cancelAnimationFrame(frameRef.current);
+      if (moveFrameRef.current) {
+        window.cancelAnimationFrame(moveFrameRef.current);
+        moveFrameRef.current = 0;
+      }
 
       if (terrainRef.current) {
         scene.remove(terrainRef.current);
@@ -529,8 +559,10 @@ export function DemViewport({
     profileStartRef.current = null;
     profileEndRef.current = null;
     pointerDownRef.current = null;
+    pendingMoveRef.current = null;
     onProfileChange?.(null);
     setProfileHint(null);
+    lastHintRef.current = null;
 
     clearProfileVisuals(
       scene,
@@ -594,6 +626,7 @@ export function DemViewport({
     profileStartRef.current = null;
     profileEndRef.current = null;
     pointerDownRef.current = null;
+    pendingMoveRef.current = null;
     onProfileChange?.(null);
 
     clearProfileVisuals(
@@ -611,6 +644,7 @@ export function DemViewport({
         text: hintText(null, null),
       };
     });
+    lastHintRef.current = null;
   }, [profileResetKey, profileEnabled, onProfileChange]);
 
   useEffect(() => {
@@ -619,27 +653,45 @@ export function DemViewport({
 
     if (!profileEnabled) {
       setProfileHint(null);
+      lastHintRef.current = null;
       pointerDownRef.current = null;
+      pendingMoveRef.current = null;
       return;
     }
 
-    const updateHintAtCursor = (event: PointerEvent) => {
+    const applyHintState = (next: ProfileHintState | null) => {
+      const prev = lastHintRef.current;
+      if (!next && !prev) return;
+      if (
+        next &&
+        prev &&
+        next.text === prev.text &&
+        Math.abs(next.x - prev.x) < HINT_MIN_MOVE_PX &&
+        Math.abs(next.y - prev.y) < HINT_MIN_MOVE_PX
+      ) {
+        return;
+      }
+      lastHintRef.current = next;
+      setProfileHint(next);
+    };
+
+    const updateHintAtCursor = (clientX: number, clientY: number) => {
       const rect = renderer.domElement.getBoundingClientRect();
-      const localX = event.clientX - rect.left;
-      const localY = event.clientY - rect.top;
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
       if (localX < 0 || localY < 0 || localX > rect.width || localY > rect.height) {
-        setProfileHint(null);
+        applyHintState(null);
         return;
       }
 
-      setProfileHint({
+      applyHintState({
         x: clamp(localX + 14, 8, rect.width - 8),
         y: clamp(localY - 12, 8, rect.height - 8),
         text: hintText(profileStartRef.current, profileEndRef.current),
       });
     };
 
-    const pickOnTerrain = (event: PointerEvent): DemProfilePick | null => {
+    const pickOnTerrain = (clientX: number, clientY: number): DemProfilePick | null => {
       const camera = cameraRef.current;
       const terrain = terrainRef.current;
       if (!camera || !terrain) return null;
@@ -647,12 +699,11 @@ export function DemViewport({
       const rect = renderer.domElement.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return null;
 
-      const pointer = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1
-      );
+      const pointer = pointerRef.current;
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
 
-      const raycaster = new THREE.Raycaster();
+      const raycaster = raycasterRef.current;
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObject(terrain, false);
       if (!hits.length) return null;
@@ -672,8 +723,6 @@ export function DemViewport({
     };
 
     const handlePointerMove = (event: PointerEvent) => {
-      updateHintAtCursor(event);
-
       const pointerDown = pointerDownRef.current;
       if (pointerDown) {
         const dx = event.clientX - pointerDown.x;
@@ -683,24 +732,42 @@ export function DemViewport({
         }
       }
 
-      if ((event.buttons & 1) === 1) {
-        return;
-      }
+      pendingMoveRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        buttons: event.buttons,
+      };
 
-      const start = profileStartRef.current;
-      const end = profileEndRef.current;
-      if (!start || end) return;
+      if (moveFrameRef.current) return;
+      moveFrameRef.current = window.requestAnimationFrame(() => {
+        moveFrameRef.current = 0;
+        const pending = pendingMoveRef.current;
+        if (!pending) return;
 
-      const picked = pickOnTerrain(event);
-      if (!picked) return;
-      const scene = sceneRef.current;
-      const guideLine = ensureProfileLine(scene, profileGuideLineRef, 0x74b4ff);
-      setLinePositions(guideLine, buildGuideLinePositions(start.world, picked.world));
+        updateHintAtCursor(pending.x, pending.y);
+
+        if ((pending.buttons & 1) === 1) {
+          return;
+        }
+
+        const start = profileStartRef.current;
+        const end = profileEndRef.current;
+        if (!start || end) return;
+
+        const picked = pickOnTerrain(pending.x, pending.y);
+        if (!picked) return;
+        const scene = sceneRef.current;
+        const guideLine = ensureProfileLine(scene, profileGuideLineRef, 0x74b4ff);
+        setLinePositions(
+          guideLine,
+          fillGuideLinePositions(guidePositionsRef.current, start.world, picked.world)
+        );
+      });
     };
 
     const handlePointerUp = (event: PointerEvent) => {
       if (event.button !== 0) return;
-      updateHintAtCursor(event);
+      updateHintAtCursor(event.clientX, event.clientY);
 
       const pointerDown = pointerDownRef.current;
       pointerDownRef.current = null;
@@ -710,7 +777,7 @@ export function DemViewport({
       const end = profileEndRef.current;
       if (start && end) return;
 
-      const picked = pickOnTerrain(event);
+      const picked = pickOnTerrain(event.clientX, event.clientY);
       if (!picked) return;
 
       const scene = sceneRef.current;
@@ -733,14 +800,12 @@ export function DemViewport({
         if (startMarker) {
           setMarkerAtPick(profileStartMarkerRef, picked, grid, terrain);
         }
-        setProfileHint((current) =>
-          current
-            ? {
-                ...current,
-                text: hintText(profileStartRef.current, profileEndRef.current),
-              }
-            : current
-        );
+        if (lastHintRef.current) {
+          applyHintState({
+            ...lastHintRef.current,
+            text: hintText(profileStartRef.current, profileEndRef.current),
+          });
+        }
         return;
       }
 
@@ -758,19 +823,22 @@ export function DemViewport({
       const profile: DemProfileResult = buildLineProfile(start.local, picked.local, grid);
       onProfileChange?.(profile);
 
-      setProfileHint((current) =>
-        current
-          ? {
-              ...current,
-              text: hintText(profileStartRef.current, profileEndRef.current),
-            }
-          : current
-      );
+      if (lastHintRef.current) {
+        applyHintState({
+          ...lastHintRef.current,
+          text: hintText(profileStartRef.current, profileEndRef.current),
+        });
+      }
     };
 
     const handlePointerLeave = () => {
-      setProfileHint(null);
+      applyHintState(null);
       pointerDownRef.current = null;
+      pendingMoveRef.current = null;
+      if (moveFrameRef.current) {
+        window.cancelAnimationFrame(moveFrameRef.current);
+        moveFrameRef.current = 0;
+      }
     };
 
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
@@ -783,6 +851,11 @@ export function DemViewport({
       renderer.domElement.removeEventListener("pointermove", handlePointerMove);
       renderer.domElement.removeEventListener("pointerup", handlePointerUp);
       renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+      if (moveFrameRef.current) {
+        window.cancelAnimationFrame(moveFrameRef.current);
+        moveFrameRef.current = 0;
+      }
+      pendingMoveRef.current = null;
     };
   }, [profileEnabled, onProfileChange]);
 
