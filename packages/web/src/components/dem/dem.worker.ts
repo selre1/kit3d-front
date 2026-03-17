@@ -26,7 +26,7 @@ type WorkerFailure = {
   error: string;
 };
 
-const MAX_GRID_SIZE = 1024;
+const MAX_GRID_SIZE = 1;
 
 function parseNoDataValue(raw: unknown): number | null {
   if (raw === null || raw === undefined) return null;

@@ -69,14 +69,11 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
         title={
           <Space size={8}>
             <LineChartOutlined />
-            <span>고도 프로파일</span>
+            <span>지형 고도 프로파일 분석</span>
           </Space>
         }
         extra={
           <Space size={8}>
-            <Tag color={enabled ? "processing" : "default"}>
-              {enabled ? "측정 모드 ON" : "측정 모드 OFF"}
-            </Tag>
             <Button
               size="small"
               type="text"
@@ -113,10 +110,10 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
             </div>
             <div className="dem-profile-endpoints">
               <span className="dem-profile-endpoint dem-profile-endpoint-start">
-                Start {formatValue(profile.startElevation)} m
+                시작점 {formatValue(profile.startElevation)} m
               </span>
               <span className="dem-profile-endpoint dem-profile-endpoint-end">
-                End {formatValue(profile.endElevation)} m
+                끝점 {formatValue(profile.endElevation)} m
               </span>
             </div>
 
@@ -155,8 +152,8 @@ export function DemProfilePanel({ enabled, profile, onClear }: DemProfilePanelPr
               <div className="dem-profile-label dem-profile-label-min">
                 {formatValue(profile.minElevation)} m
               </div>
-              <div className="dem-profile-label dem-profile-label-start">Start</div>
-              <div className="dem-profile-label dem-profile-label-end">End</div>
+              <div className="dem-profile-label dem-profile-label-start">시작점</div>
+              <div className="dem-profile-label dem-profile-label-end">끝점</div>
             </div>
           </div>
         ) : (
