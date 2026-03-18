@@ -389,7 +389,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
               setViewerEnabled(true);
             }}
           >
-            {"Enable IFC loading"}
+            {"IFC 모델 보기"}
           </Button>
         </div>
       ) : null}

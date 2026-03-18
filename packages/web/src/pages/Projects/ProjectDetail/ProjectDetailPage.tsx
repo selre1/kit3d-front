@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Tabs } from "antd";
-import { RiDatabase2Fill, RiSwapLine } from "react-icons/ri";
+import { ImportOutlined, SwapOutlined } from "@ant-design/icons";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import { apiGet } from "../../../tools/api";
@@ -54,7 +54,7 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
         {
           key: "import",
           label: "임포트",
-          icon: <RiDatabase2Fill />,
+          icon: <ImportOutlined />,
           children: (
             <ProjectImportTab
               projectId={projectId}
@@ -66,7 +66,7 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
         {
           key: "conversion",
           label: "변환",
-          icon: <RiSwapLine />,
+          icon: <SwapOutlined />,
           children: <ProjectConversionTab projectId={projectId} />,
         },
       ]}

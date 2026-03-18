@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Modal, Progress, Spin, Upload, message } from "antd";
 import type { UploadFile } from "antd";
-import { RiInboxArchiveLine } from "react-icons/ri";
+import { InboxOutlined } from "@ant-design/icons";
 
 import { apiPost } from "../../../../tools/api";
 import type { ImportJobItem, ImportUploadResponse } from "../../../../types/project";
@@ -168,7 +168,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
           style={{ padding: 16 }}
         >
           <p className="ant-upload-drag-icon">
-            <RiInboxArchiveLine />
+            <InboxOutlined />
           </p>
           <p className="ant-upload-text">IFC 파일을 드래그하거나 클릭해 업로드하세요.</p>
           <p className="ant-upload-hint">여러 개 IFC 파일을 한 번에 올릴 수 있습니다.</p>

@@ -8,6 +8,7 @@
     "build": "tsc && vite build"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
     "react-icons": "^5.5.0",
     "@thatopen/components": "^2.3.18",
     "@zip.js/zip.js": "2.8.21",

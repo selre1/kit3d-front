@@ -14,14 +14,14 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
-  RiCheckboxCircleLine,
-  RiCloseCircleLine,
-  RiDownloadCloud2Line,
-  RiErrorWarningLine,
-  RiFileTextLine,
-  RiLoader4Line,
-  RiTimeLine,
-} from "react-icons/ri";
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  DownloadOutlined,
+  ExclamationCircleOutlined,
+  FileTextOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
 import { apiGet } from "../../../../../tools/api";
 import { IfcViewer } from "../../../../../components/ifc/IfcViewer";
 import type { ImportJobItem } from "../../../../../types/project";
@@ -31,15 +31,15 @@ function statusTagProps(status?: string | null) {
   const normalized = status?.toUpperCase();
   switch (normalized) {
     case "DONE":
-      return { color: "success", icon: <RiCheckboxCircleLine /> };
+      return { color: "success", icon: <CheckCircleOutlined /> };
     case "RUNNING":
-      return { color: "processing", icon: <RiLoader4Line className="ri-spin" /> };
+      return { color: "processing", icon: <LoadingOutlined spin /> };
     case "FAILED":
-      return { color: "error", icon: <RiCloseCircleLine /> };
+      return { color: "error", icon: <CloseCircleOutlined /> };
     case "PENDING":
-      return { color: "warning", icon: <RiErrorWarningLine /> };
+      return { color: "warning", icon: <ExclamationCircleOutlined /> };
     default:
-      return { color: "default", icon: <RiTimeLine /> };
+      return { color: "default", icon: <ClockCircleOutlined /> };
   }
 }
 
@@ -149,7 +149,7 @@ export function ProjectModelsList({
         ellipsis: true,
         render: (value) => (
           <div className="models-name">
-            <Avatar shape="square" size="small" icon={<RiFileTextLine />} />
+            <Avatar shape="square" size="small" icon={<FileTextOutlined />} />
             <span>{value}</span>
           </div>
         ),
@@ -191,7 +191,7 @@ export function ProjectModelsList({
           <Button
             size="small"
             shape="circle"
-            icon={<RiDownloadCloud2Line />}
+            icon={<DownloadOutlined />}
             loading={downloadingId === record.file_id}
             disabled={!record.file_id || record.status?.toUpperCase() !== "DONE"}
             onClick={(event) => handleDownload(event, record)}

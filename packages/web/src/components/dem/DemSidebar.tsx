@@ -9,7 +9,7 @@ import {
 } from "react-icons/ri";
 import { MdMenu, Md3dRotation, MdOutlineAddPhotoAlternate } from "react-icons/md";
 import { TbChartLine } from "react-icons/tb";
-import { Button, Dropdown, Empty, Tag } from "antd";
+import { Button, Dropdown, Empty, Tag, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 
 import type { DemItem } from "./types";
@@ -69,6 +69,9 @@ export function DemSidebar({
   onDownloadTifItem,
   onToggleCollapse,
 }: DemSidebarProps) {
+  const getTooltipContainer = (trigger: HTMLElement) =>
+    (trigger.closest(".dem-sidebar-actions") as HTMLElement) ?? trigger;
+
   const selectedItem = useMemo(
     () => items.find((item) => item.dem_id === selectedDemId) ?? null,
     [items, selectedDemId]
@@ -147,37 +150,65 @@ export function DemSidebar({
         </div>
 
         <div className="dem-sidebar-actions">
-          <Button
-            size="small"
-            type="text"
-            icon={<RiRefreshLine />}
-            loading={refreshing}
-            onClick={onRefresh}
-            aria-label="새로고침"
-          />
-          <Button
-            size="small"
-            type="text"
-            className={`dem-rotate-btn ${rotating ? "is-active" : ""}`}
-            icon={<Md3dRotation className={rotating ? "ri-spin" : undefined} />}
-            onClick={onToggleRotate}
-            aria-label={rotating ? "회전 멈춤" : "회전 시작"}
-          />
-          <Button
-            size="small"
-            type="text"
-            className={`dem-profile-btn ${profiling ? "is-active" : ""}`}
-            icon={<TbChartLine />}
-            onClick={onToggleProfiling}
-            aria-label={profiling ? "프로파일 측정 모드 종료" : "프로파일 측정 모드 시작"}
-          />
-          <Button
-            size="small"
-            type="text"
-            icon={<MdOutlineAddPhotoAlternate />}
-            onClick={onOpenUpload}
-            aria-label="DEM 업로드"
-          />
+          <Tooltip
+            title="새로고침"
+            placement="top"
+            overlayClassName="dem-action-tooltip"
+            getPopupContainer={getTooltipContainer}
+          >
+            <Button
+              size="small"
+              type="text"
+              icon={<RiRefreshLine />}
+              loading={refreshing}
+              onClick={onRefresh}
+              aria-label="새로고침"
+            />
+          </Tooltip>
+          <Tooltip
+            title={rotating ? "회전 멈춤" : "회전 시작"}
+            placement="top"
+            overlayClassName="dem-action-tooltip"
+            getPopupContainer={getTooltipContainer}
+          >
+            <Button
+              size="small"
+              type="text"
+              className={`dem-rotate-btn ${rotating ? "is-active" : ""}`}
+              icon={<Md3dRotation className={rotating ? "ri-spin" : undefined} />}
+              onClick={onToggleRotate}
+              aria-label={rotating ? "회전 멈춤" : "회전 시작"}
+            />
+          </Tooltip>
+          <Tooltip
+            title={profiling ? "프로파일 분석 종료" : "프로파일 분석 시작"}
+            placement="top"
+            overlayClassName="dem-action-tooltip"
+            getPopupContainer={getTooltipContainer}
+          >
+            <Button
+              size="small"
+              type="text"
+              className={`dem-profile-btn ${profiling ? "is-active" : ""}`}
+              icon={<TbChartLine />}
+              onClick={onToggleProfiling}
+              aria-label={profiling ? "프로파일 분석 종료" : "프로파일 분석 시작"}
+            />
+          </Tooltip>
+          <Tooltip
+            title="DEM 업로드"
+            placement="top"
+            overlayClassName="dem-action-tooltip"
+            getPopupContainer={getTooltipContainer}
+          >
+            <Button
+              size="small"
+              type="text"
+              icon={<MdOutlineAddPhotoAlternate />}
+              onClick={onOpenUpload}
+              aria-label="DEM 업로드"
+            />
+          </Tooltip>
         </div>
       </div>
 

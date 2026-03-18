@@ -212,7 +212,7 @@
 
 .dem-sidebar-toggle-handle {
   position: absolute;
-  right: -12px;
+  right: -20px;
   top: 50%;
   transform: translateY(-50%);
   width: 20px;
@@ -272,6 +272,8 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  position: relative;
+  overflow: visible;
 }
 
 .dem-sidebar-actions .ant-btn {
@@ -520,6 +522,17 @@
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+.dem-upload-modal .ant-upload-drag-icon {
+  margin-bottom: 10px;
+}
+
+.dem-upload-modal .ant-upload-drag-icon .anticon,
+.dem-upload-modal .ant-upload-drag-icon svg {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+}
+
 .dem-upload-section {
   padding-top: 8px;
 }
@@ -685,9 +698,10 @@
 
 .dem-profile-label {
   position: absolute;
-  font-size: 11px;
-  color: #bfd5f6;
+  font-size: 12px;
+  color: #6aff3f;
   pointer-events: none;
+  font-weight: 500;
 }
 
 .dem-profile-label-max {
@@ -750,7 +764,7 @@
     flex-basis: auto;
     width: 100%;
     height: auto;
-    max-height: 64%;
+    max-height: 40%;
     min-height: 320px;
     border-right: none;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -763,7 +777,7 @@
   .dem-sidebar-toggle-handle {
     left: 50%;
     right: auto;
-    top: -11px;
+    top: -20px;
     transform: translateX(-50%);
     width: 50px;
     height: 20px;
@@ -791,8 +805,7 @@
   }
 
   .dem-sidebar.is-collapsed .dem-sidebar-header {
-    justify-content: space-between;
-    padding: 10px 12px;
+    padding: 20px 12px;
   }
 
   .dem-sidebar.is-collapsed .dem-sidebar-actions {

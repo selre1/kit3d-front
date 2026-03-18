@@ -14,6 +14,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@ant-design/icons':
+        specifier: ^6.1.0
+        version: 6.1.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@thatopen/components':
         specifier: ^2.3.18
         version: 2.4.11(@thatopen/fragments@3.0.11(three@0.180.0)(web-ifc@0.0.68))(three@0.180.0)(web-ifc@0.0.68)
