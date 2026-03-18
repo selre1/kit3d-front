@@ -92,6 +92,7 @@ export function DemProfilePanel({
   const [hoverReadoutPos, setHoverReadoutPos] = useState<{ x: number; y: number } | null>(
     null
   );
+  const [hoverDotPos, setHoverDotPos] = useState<{ x: number; y: number } | null>(null);
 
   const linePath = profile
     ? buildLinePath(profile, chartWidth, chartHeight, padX, padY)
@@ -168,26 +169,63 @@ export function DemProfilePanel({
         applyHoverSampleIndex(nextIndex);
 
         const chartSurface = chartSurfaceRef.current;
-        if (!chartSurface || nextIndex === null) {
+        const chartSvg = chartSvgRef.current;
+        if (!profile || !chartSurface || !chartSvg || nextIndex === null) {
           setHoverReadoutPos(null);
+          setHoverDotPos(null);
           return;
         }
 
         const surfaceRect = chartSurface.getBoundingClientRect();
-        if (surfaceRect.width <= 0 || surfaceRect.height <= 0) {
+        const svgRect = chartSvg.getBoundingClientRect();
+        if (
+          surfaceRect.width <= 0 ||
+          surfaceRect.height <= 0 ||
+          svgRect.width <= 0 ||
+          svgRect.height <= 0
+        ) {
           setHoverReadoutPos(null);
+          setHoverDotPos(null);
           return;
         }
 
-        const localX = pendingClientX - surfaceRect.left;
+        const sample = profile.samples[nextIndex];
+        if (!sample) {
+          setHoverReadoutPos(null);
+          setHoverDotPos(null);
+          return;
+        }
+
+        const point = getChartPoint(
+          profile,
+          sample.ratio,
+          sample.elevation,
+          chartWidth,
+          chartHeight,
+          padX,
+          padY
+        );
+        const pointX =
+          svgRect.left -
+          surfaceRect.left +
+          (point.x / chartWidth) * svgRect.width;
+        const pointY =
+          svgRect.top -
+          surfaceRect.top +
+          (point.y / chartHeight) * svgRect.height;
+        const clampedX = clamp(pointX, 8, surfaceRect.width - 8);
 
         setHoverReadoutPos({
-          x: clamp(localX, 8, surfaceRect.width - 8),
+          x: clampedX,
           y: 14,
+        });
+        setHoverDotPos({
+          x: clampedX,
+          y: clamp(pointY, 8, surfaceRect.height - 8),
         });
       });
     },
-    [applyHoverSampleIndex, resolveSampleIndexByClientX]
+    [applyHoverSampleIndex, chartHeight, chartWidth, padX, padY, profile, resolveSampleIndexByClientX]
   );
 
   const handleChartPointerLeave = useCallback(() => {
@@ -198,12 +236,14 @@ export function DemProfilePanel({
     }
     applyHoverSampleIndex(null);
     setHoverReadoutPos(null);
+    setHoverDotPos(null);
   }, [applyHoverSampleIndex]);
 
   useEffect(() => {
     if (!enabled || !profile) {
       applyHoverSampleIndex(null);
       setHoverReadoutPos(null);
+      setHoverDotPos(null);
     }
   }, [enabled, profile, applyHoverSampleIndex]);
 
@@ -230,12 +270,6 @@ export function DemProfilePanel({
           padY
         )
       : null;
-  const hoverPointOverlayStyle = hoverPoint
-    ? {
-        left: `${(hoverPoint.x / chartWidth) * 100}%`,
-        top: `${(hoverPoint.y / chartHeight) * 100}%`,
-      }
-    : null;
 
   return (
     <div className="dem-profile-panel">
@@ -331,10 +365,10 @@ export function DemProfilePanel({
                   </>
                 ) : null}
               </svg>
-              {hoverPointOverlayStyle ? (
+              {hoverDotPos ? (
                 <div
                   className="dem-profile-hover-dot"
-                  style={hoverPointOverlayStyle}
+                  style={{ left: `${hoverDotPos.x}px`, top: `${hoverDotPos.y}px` }}
                 />
               ) : null}
               <div className="dem-profile-label dem-profile-label-max">
@@ -367,4 +401,3 @@ export function DemProfilePanel({
     </div>
   );
 }
-

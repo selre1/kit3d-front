@@ -55,13 +55,6 @@ type ProfileHintState = {
   text: string;
 };
 
-type ViewerProfileLabel = {
-  key: "start" | "end" | "distance";
-  x: number;
-  y: number;
-  text: string;
-};
-
 const PROFILE_LIFT = 1.4;
 const CLICK_MOVE_THRESHOLD = 6;
 const HINT_MIN_MOVE_PX = 2;
@@ -175,6 +168,38 @@ function projectToViewport(
   }
 
   return { x, y };
+}
+
+function hideOverlayLabel(element: HTMLDivElement | null) {
+  if (!element) return;
+  if (element.style.display !== "none") {
+    element.style.display = "none";
+  }
+}
+
+function setOverlayLabel(
+  element: HTMLDivElement | null,
+  x: number,
+  y: number,
+  text: string
+) {
+  if (!element) return;
+  const roundedX = Math.round(x);
+  const roundedY = Math.round(y);
+  const nextLeft = `${roundedX}px`;
+  const nextTop = `${roundedY}px`;
+  if (element.style.display !== "block") {
+    element.style.display = "block";
+  }
+  if (element.style.left !== nextLeft) {
+    element.style.left = nextLeft;
+  }
+  if (element.style.top !== nextTop) {
+    element.style.top = nextTop;
+  }
+  if (element.textContent !== text) {
+    element.textContent = text;
+  }
 }
 
 function ensureProfileLine(
@@ -494,12 +519,13 @@ export function DemViewport({
   const lastHintRef = useRef<ProfileHintState | null>(null);
   const profileEnabledRef = useRef<boolean>(profileEnabled);
   const profileDistanceTextRef = useRef<string | null>(null);
-  const profileLabelsSignatureRef = useRef<string>("");
+  const startLabelRef = useRef<HTMLDivElement | null>(null);
+  const endLabelRef = useRef<HTMLDivElement | null>(null);
+  const distanceLabelRef = useRef<HTMLDivElement | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [profileHint, setProfileHint] = useState<ProfileHintState | null>(null);
-  const [viewerProfileLabels, setViewerProfileLabels] = useState<ViewerProfileLabel[]>([]);
   const [elevationRange, setElevationRange] = useState<{ min: number; max: number } | null>(
     null
   );
@@ -514,10 +540,9 @@ export function DemViewport({
 
   const updateViewerProfileLabels = useCallback(() => {
     if (!profileEnabledRef.current) {
-      if (profileLabelsSignatureRef.current !== "") {
-        profileLabelsSignatureRef.current = "";
-        setViewerProfileLabels([]);
-      }
+      hideOverlayLabel(startLabelRef.current);
+      hideOverlayLabel(endLabelRef.current);
+      hideOverlayLabel(distanceLabelRef.current);
       return;
     }
 
@@ -528,10 +553,9 @@ export function DemViewport({
     const distanceText = profileDistanceTextRef.current;
 
     if (!camera || !renderer || !start || !end || !distanceText) {
-      if (profileLabelsSignatureRef.current !== "") {
-        profileLabelsSignatureRef.current = "";
-        setViewerProfileLabels([]);
-      }
+      hideOverlayLabel(startLabelRef.current);
+      hideOverlayLabel(endLabelRef.current);
+      hideOverlayLabel(distanceLabelRef.current);
       return;
     }
 
@@ -547,43 +571,21 @@ export function DemViewport({
     const startPos = projectToViewport(startAnchor, camera, renderer);
     const endPos = projectToViewport(endAnchor, camera, renderer);
     const distancePos = projectToViewport(distanceAnchor, camera, renderer);
-
-    const next: ViewerProfileLabel[] = [];
     if (startPos) {
-      next.push({
-        key: "start",
-        x: startPos.x + 10,
-        y: startPos.y - 10,
-        text: "START",
-      });
+      setOverlayLabel(startLabelRef.current, startPos.x + 10, startPos.y - 10, "START");
+    } else {
+      hideOverlayLabel(startLabelRef.current);
     }
     if (endPos) {
-      next.push({
-        key: "end",
-        x: endPos.x + 10,
-        y: endPos.y - 10,
-        text: "END",
-      });
+      setOverlayLabel(endLabelRef.current, endPos.x + 10, endPos.y - 10, "END");
+    } else {
+      hideOverlayLabel(endLabelRef.current);
     }
     if (distancePos) {
-      next.push({
-        key: "distance",
-        x: distancePos.x,
-        y: distancePos.y - 14,
-        text: distanceText,
-      });
+      setOverlayLabel(distanceLabelRef.current, distancePos.x, distancePos.y - 14, distanceText);
+    } else {
+      hideOverlayLabel(distanceLabelRef.current);
     }
-
-    const signature = next
-      .map((item) => `${item.key}:${Math.round(item.x)}:${Math.round(item.y)}:${item.text}`)
-      .join("|");
-
-    if (signature === profileLabelsSignatureRef.current) {
-      return;
-    }
-
-    profileLabelsSignatureRef.current = signature;
-    setViewerProfileLabels(next);
   }, []);
 
   useEffect(() => {
@@ -693,8 +695,9 @@ export function DemViewport({
   useEffect(() => {
     profileEnabledRef.current = profileEnabled;
     if (!profileEnabled) {
-      profileLabelsSignatureRef.current = "";
-      setViewerProfileLabels([]);
+      hideOverlayLabel(startLabelRef.current);
+      hideOverlayLabel(endLabelRef.current);
+      hideOverlayLabel(distanceLabelRef.current);
     }
   }, [profileEnabled]);
 
@@ -711,8 +714,9 @@ export function DemViewport({
     profileStartRef.current = null;
     profileEndRef.current = null;
     profileDistanceTextRef.current = null;
-    profileLabelsSignatureRef.current = "";
-    setViewerProfileLabels([]);
+    hideOverlayLabel(startLabelRef.current);
+    hideOverlayLabel(endLabelRef.current);
+    hideOverlayLabel(distanceLabelRef.current);
     pointerDownRef.current = null;
     pendingMoveRef.current = null;
     onProfileChange?.(null);
@@ -733,8 +737,9 @@ export function DemViewport({
       setViewerError(null);
       setElevationRange(null);
       profileDistanceTextRef.current = null;
-      profileLabelsSignatureRef.current = "";
-      setViewerProfileLabels([]);
+      hideOverlayLabel(startLabelRef.current);
+      hideOverlayLabel(endLabelRef.current);
+      hideOverlayLabel(distanceLabelRef.current);
       gridDataRef.current = null;
       onMetaChange?.(null);
       return;
@@ -785,8 +790,9 @@ export function DemViewport({
     profileStartRef.current = null;
     profileEndRef.current = null;
     profileDistanceTextRef.current = null;
-    profileLabelsSignatureRef.current = "";
-    setViewerProfileLabels([]);
+    hideOverlayLabel(startLabelRef.current);
+    hideOverlayLabel(endLabelRef.current);
+    hideOverlayLabel(distanceLabelRef.current);
     pointerDownRef.current = null;
     pendingMoveRef.current = null;
     onProfileChange?.(null);
@@ -862,8 +868,9 @@ export function DemViewport({
       setProfileHint(null);
       lastHintRef.current = null;
       profileDistanceTextRef.current = null;
-      profileLabelsSignatureRef.current = "";
-      setViewerProfileLabels([]);
+      hideOverlayLabel(startLabelRef.current);
+      hideOverlayLabel(endLabelRef.current);
+      hideOverlayLabel(distanceLabelRef.current);
       pointerDownRef.current = null;
       pendingMoveRef.current = null;
       hideMarker(profileHoverMarkerRef);
@@ -1000,8 +1007,9 @@ export function DemViewport({
         profileStartRef.current = picked;
         profileEndRef.current = null;
         profileDistanceTextRef.current = null;
-        profileLabelsSignatureRef.current = "";
-        setViewerProfileLabels([]);
+        hideOverlayLabel(startLabelRef.current);
+        hideOverlayLabel(endLabelRef.current);
+        hideOverlayLabel(distanceLabelRef.current);
         onProfileChange?.(null);
         hideLine(profileLineRef.current);
         hideLine(profileGuideLineRef.current);
@@ -1092,20 +1100,9 @@ export function DemViewport({
           {profileHint.text}
         </div>
       ) : null}
-      {profileEnabled && viewerProfileLabels.length
-        ? viewerProfileLabels.map((label) => (
-            <div
-              key={label.key}
-              className={`dem-profile-anchor dem-profile-anchor-${label.key}`}
-              style={{
-                left: `${label.x}px`,
-                top: `${label.y}px`,
-              }}
-            >
-              {label.text}
-            </div>
-          ))
-        : null}
+      <div ref={startLabelRef} className="dem-profile-anchor dem-profile-anchor-start" />
+      <div ref={endLabelRef} className="dem-profile-anchor dem-profile-anchor-end" />
+      <div ref={distanceLabelRef} className="dem-profile-anchor dem-profile-anchor-distance" />
       {elevationRange ? (
         <div className="dem-legend" aria-label="elevation-legend">
           <div className="dem-legend-title">Elevation (m)</div>

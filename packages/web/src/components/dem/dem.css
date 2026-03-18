@@ -105,6 +105,7 @@
 .dem-profile-anchor {
   position: absolute;
   z-index: 9;
+  display: none;
   transform: translate(0, -100%);
   border-radius: 999px;
   padding: 3px 8px;
