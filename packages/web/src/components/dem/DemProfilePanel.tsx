@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Card, Empty, Space, Statistic, Typography } from "antd";
+import { Button, Card, Empty, Space, Tag, Typography } from "antd";
 import { CloseOutlined, DeleteOutlined, LineChartOutlined } from "@ant-design/icons";
 
 import type { DemProfileResult } from "./types";
@@ -17,7 +17,6 @@ type DemProfilePanelProps = {
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
-
 function formatValue(value: number, digits = 1) {
   if (!Number.isFinite(value)) return "-";
   return value.toFixed(digits);
@@ -90,6 +89,9 @@ export function DemProfilePanel({
   const pendingClientXRef = useRef<number | null>(null);
   const hoverSampleIndexRef = useRef<number | null>(null);
   const [hoverSampleIndex, setHoverSampleIndex] = useState<number | null>(null);
+  const [hoverReadoutPos, setHoverReadoutPos] = useState<{ x: number; y: number } | null>(
+    null
+  );
 
   const linePath = profile
     ? buildLinePath(profile, chartWidth, chartHeight, padX, padY)
@@ -164,6 +166,25 @@ export function DemProfilePanel({
 
         const nextIndex = resolveSampleIndexByClientX(pendingClientX);
         applyHoverSampleIndex(nextIndex);
+
+        const chartSurface = chartSurfaceRef.current;
+        if (!chartSurface || nextIndex === null) {
+          setHoverReadoutPos(null);
+          return;
+        }
+
+        const surfaceRect = chartSurface.getBoundingClientRect();
+        if (surfaceRect.width <= 0 || surfaceRect.height <= 0) {
+          setHoverReadoutPos(null);
+          return;
+        }
+
+        const localX = pendingClientX - surfaceRect.left;
+
+        setHoverReadoutPos({
+          x: clamp(localX, 8, surfaceRect.width - 8),
+          y: 14,
+        });
       });
     },
     [applyHoverSampleIndex, resolveSampleIndexByClientX]
@@ -176,11 +197,13 @@ export function DemProfilePanel({
       hoverFrameRef.current = 0;
     }
     applyHoverSampleIndex(null);
+    setHoverReadoutPos(null);
   }, [applyHoverSampleIndex]);
 
   useEffect(() => {
     if (!enabled || !profile) {
       applyHoverSampleIndex(null);
+      setHoverReadoutPos(null);
     }
   }, [enabled, profile, applyHoverSampleIndex]);
 
@@ -244,33 +267,16 @@ export function DemProfilePanel({
       >
         {profile ? (
           <div className="dem-profile-content">
-            <div className="dem-profile-stats">
-              <Statistic
-                title="거리"
-                value={profile.totalDistanceKm}
-                precision={2}
-                suffix="km"
-              />
-              <Statistic
-                title="최저"
-                value={profile.minElevation}
-                precision={1}
-                suffix="m"
-              />
-              <Statistic
-                title="최고"
-                value={profile.maxElevation}
-                precision={1}
-                suffix="m"
-              />
-            </div>
-            <div className="dem-profile-endpoints">
-              <span className="dem-profile-endpoint dem-profile-endpoint-start">
+            <div className="dem-profile-metrics">
+              <Tag className="dem-profile-metric">거리 {formatValue(profile.totalDistanceKm, 2)} km</Tag>
+              <Tag className="dem-profile-metric">최저 {formatValue(profile.minElevation)} m</Tag>
+              <Tag className="dem-profile-metric">최고 {formatValue(profile.maxElevation)} m</Tag>
+              <Tag className="dem-profile-metric dem-profile-metric-start">
                 시작점 {formatValue(profile.startElevation)} m
-              </span>
-              <span className="dem-profile-endpoint dem-profile-endpoint-end">
+              </Tag>
+              <Tag className="dem-profile-metric dem-profile-metric-end">
                 끝점 {formatValue(profile.endElevation)} m
-              </span>
+              </Tag>
             </div>
 
             <div
@@ -331,8 +337,13 @@ export function DemProfilePanel({
               <div className="dem-profile-label dem-profile-label-min">
                 {formatValue(profile.minElevation)} m
               </div>
-              {hoverSample ? (
-                <div className="dem-profile-hover-readout">{formatValue(hoverSample.elevation)} m</div>
+              {hoverSample && hoverReadoutPos ? (
+                <div
+                  className="dem-profile-hover-readout"
+                  style={{ left: `${hoverReadoutPos.x}px`, top: `${hoverReadoutPos.y}px` }}
+                >
+                  {formatValue(hoverSample.elevation)} m
+                </div>
               ) : null}
             </div>
           </div>
@@ -350,3 +361,4 @@ export function DemProfilePanel({
     </div>
   );
 }
+

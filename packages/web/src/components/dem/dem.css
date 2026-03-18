@@ -506,8 +506,6 @@
 
 .dem-profile-card .ant-card-head-title,
 .dem-profile-card .ant-card-extra,
-.dem-profile-card .ant-statistic-title,
-.dem-profile-card .ant-statistic-content,
 .dem-profile-card .ant-tag,
 .dem-profile-card .ant-btn {
   color: #deebff;
@@ -528,46 +526,29 @@
   gap: 8px;
 }
 
-.dem-profile-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.dem-profile-metrics {
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
-.dem-profile-stats .ant-statistic {
-  padding: 4px 6px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(11, 17, 29, 0.54);
-}
-
-.dem-profile-stats .ant-statistic-content {
-  font-size: 15px;
-}
-
-.dem-profile-endpoints {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.dem-profile-endpoint {
+.dem-profile-metric.ant-tag {
+  margin: 0;
+  padding: 3px 8px;
   font-size: 12px;
-  line-height: 1.2;
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(11, 17, 29, 0.48);
-  color: #d5e6ff;
+  line-height: 1.3;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(11, 17, 29, 0.58);
+  color: #d9e8ff;
 }
 
-.dem-profile-endpoint-start {
-  border-color: rgba(79, 157, 255, 0.46);
+.dem-profile-metric-start.ant-tag {
+  border-color: rgba(79, 157, 255, 0.52);
 }
 
-.dem-profile-endpoint-end {
-  border-color: rgba(255, 173, 77, 0.52);
+.dem-profile-metric-end.ant-tag {
+  border-color: rgba(255, 173, 77, 0.56);
 }
 
 .dem-profile-chart {
@@ -592,6 +573,7 @@
 .dem-profile-axis {
   stroke: rgba(200, 219, 245, 0.4);
   stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
 .dem-profile-area {
@@ -604,24 +586,29 @@
   stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .dem-profile-hover-line {
-  stroke: rgba(170, 208, 255, 0.9);
-  stroke-width: 1.4;
-  stroke-dasharray: 4 4;
+  stroke: rgba(226, 233, 242, 0.95);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  filter: drop-shadow(0 0 2px rgba(248, 252, 255, 0.45));
+  vector-effect: non-scaling-stroke;
 }
 
 .dem-profile-hover-point {
   fill: #f2f8ff;
   stroke: #75b2ff;
   stroke-width: 2;
+  vector-effect: non-scaling-stroke;
 }
 
 .dem-profile-hover-readout {
   position: absolute;
-  right: 8px;
-  top: 8px;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -100%);
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid rgba(117, 178, 255, 0.5);
@@ -777,8 +764,7 @@
 }
 
   .dem-profile-card .ant-card-head,
-  .dem-profile-stats,
-  .dem-profile-endpoints,
+  .dem-profile-metrics,
   .dem-profile-label,
   .dem-profile-hover-readout {
     display: none;
