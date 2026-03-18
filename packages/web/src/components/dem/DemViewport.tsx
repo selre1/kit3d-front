@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback ,type MutableRefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
@@ -50,6 +50,13 @@ type DemProfilePick = {
 };
 
 type ProfileHintState = {
+  x: number;
+  y: number;
+  text: string;
+};
+
+type ViewerProfileLabel = {
+  key: "start" | "end" | "distance";
   x: number;
   y: number;
   text: string;
@@ -139,6 +146,37 @@ function formatElevation(value: number) {
   return value.toFixed(2);
 }
 
+function formatDistanceLabel(distanceMeter: number) {
+  if (!Number.isFinite(distanceMeter)) return "-";
+  if (distanceMeter >= 1000) return `${(distanceMeter / 1000).toFixed(2)} km`;
+  return `${distanceMeter.toFixed(1)} m`;
+}
+
+function projectToViewport(
+  world: THREE.Vector3,
+  camera: THREE.PerspectiveCamera,
+  renderer: THREE.WebGLRenderer
+) {
+  const projected = world.clone().project(camera);
+  if (projected.z < -1 || projected.z > 1) {
+    return null;
+  }
+
+  const width = renderer.domElement.clientWidth;
+  const height = renderer.domElement.clientHeight;
+  if (width <= 0 || height <= 0) {
+    return null;
+  }
+
+  const x = ((projected.x + 1) * 0.5) * width;
+  const y = ((1 - projected.y) * 0.5) * height;
+  if (x < 0 || y < 0 || x > width || y > height) {
+    return null;
+  }
+
+  return { x, y };
+}
+
 function ensureProfileLine(
   scene: THREE.Scene | null,
   lineRef: MutableRefObject<THREE.Line | null>,
@@ -153,6 +191,7 @@ function ensureProfileLine(
       opacity: 0.98,
       depthTest: false,
       depthWrite: false,
+      linewidth: 2,
     });
     const line = new THREE.Line(geometry, material);
     line.renderOrder = 11;
@@ -453,10 +492,14 @@ export function DemViewport({
   const moveFrameRef = useRef<number>(0);
   const pendingMoveRef = useRef<{ x: number; y: number; buttons: number } | null>(null);
   const lastHintRef = useRef<ProfileHintState | null>(null);
+  const profileEnabledRef = useRef<boolean>(profileEnabled);
+  const profileDistanceTextRef = useRef<string | null>(null);
+  const profileLabelsSignatureRef = useRef<string>("");
 
   const [loading, setLoading] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
   const [profileHint, setProfileHint] = useState<ProfileHintState | null>(null);
+  const [viewerProfileLabels, setViewerProfileLabels] = useState<ViewerProfileLabel[]>([]);
   const [elevationRange, setElevationRange] = useState<{ min: number; max: number } | null>(
     null
   );
@@ -468,6 +511,80 @@ export function DemViewport({
     }
     return source.url;
   }, [seedKey, source]);
+
+  const updateViewerProfileLabels = useCallback(() => {
+    if (!profileEnabledRef.current) {
+      if (profileLabelsSignatureRef.current !== "") {
+        profileLabelsSignatureRef.current = "";
+        setViewerProfileLabels([]);
+      }
+      return;
+    }
+
+    const camera = cameraRef.current;
+    const renderer = rendererRef.current;
+    const start = profileStartRef.current;
+    const end = profileEndRef.current;
+    const distanceText = profileDistanceTextRef.current;
+
+    if (!camera || !renderer || !start || !end || !distanceText) {
+      if (profileLabelsSignatureRef.current !== "") {
+        profileLabelsSignatureRef.current = "";
+        setViewerProfileLabels([]);
+      }
+      return;
+    }
+
+    const startAnchor = profileStartMarkerRef.current?.visible
+      ? profileStartMarkerRef.current.position
+      : start.world;
+    const endAnchor = profileEndMarkerRef.current?.visible
+      ? profileEndMarkerRef.current.position
+      : end.world;
+    const distanceAnchor = startAnchor.clone().add(endAnchor).multiplyScalar(0.5);
+    distanceAnchor.y += 2.4;
+
+    const startPos = projectToViewport(startAnchor, camera, renderer);
+    const endPos = projectToViewport(endAnchor, camera, renderer);
+    const distancePos = projectToViewport(distanceAnchor, camera, renderer);
+
+    const next: ViewerProfileLabel[] = [];
+    if (startPos) {
+      next.push({
+        key: "start",
+        x: startPos.x + 10,
+        y: startPos.y - 10,
+        text: "START",
+      });
+    }
+    if (endPos) {
+      next.push({
+        key: "end",
+        x: endPos.x + 10,
+        y: endPos.y - 10,
+        text: "END",
+      });
+    }
+    if (distancePos) {
+      next.push({
+        key: "distance",
+        x: distancePos.x,
+        y: distancePos.y - 14,
+        text: distanceText,
+      });
+    }
+
+    const signature = next
+      .map((item) => `${item.key}:${Math.round(item.x)}:${Math.round(item.y)}:${item.text}`)
+      .join("|");
+
+    if (signature === profileLabelsSignatureRef.current) {
+      return;
+    }
+
+    profileLabelsSignatureRef.current = signature;
+    setViewerProfileLabels(next);
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -526,6 +643,7 @@ export function DemViewport({
 
     const renderLoop = () => {
       controls.update();
+      updateViewerProfileLabels();
       renderer.render(scene, camera);
       frameRef.current = window.requestAnimationFrame(renderLoop);
     };
@@ -573,6 +691,14 @@ export function DemViewport({
   }, [autoRotate]);
 
   useEffect(() => {
+    profileEnabledRef.current = profileEnabled;
+    if (!profileEnabled) {
+      profileLabelsSignatureRef.current = "";
+      setViewerProfileLabels([]);
+    }
+  }, [profileEnabled]);
+
+  useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
 
@@ -584,6 +710,9 @@ export function DemViewport({
 
     profileStartRef.current = null;
     profileEndRef.current = null;
+    profileDistanceTextRef.current = null;
+    profileLabelsSignatureRef.current = "";
+    setViewerProfileLabels([]);
     pointerDownRef.current = null;
     pendingMoveRef.current = null;
     onProfileChange?.(null);
@@ -603,6 +732,9 @@ export function DemViewport({
       setLoading(false);
       setViewerError(null);
       setElevationRange(null);
+      profileDistanceTextRef.current = null;
+      profileLabelsSignatureRef.current = "";
+      setViewerProfileLabels([]);
       gridDataRef.current = null;
       onMetaChange?.(null);
       return;
@@ -652,6 +784,9 @@ export function DemViewport({
     if (!scene) return;
     profileStartRef.current = null;
     profileEndRef.current = null;
+    profileDistanceTextRef.current = null;
+    profileLabelsSignatureRef.current = "";
+    setViewerProfileLabels([]);
     pointerDownRef.current = null;
     pendingMoveRef.current = null;
     onProfileChange?.(null);
@@ -726,6 +861,9 @@ export function DemViewport({
     if (!profileEnabled) {
       setProfileHint(null);
       lastHintRef.current = null;
+      profileDistanceTextRef.current = null;
+      profileLabelsSignatureRef.current = "";
+      setViewerProfileLabels([]);
       pointerDownRef.current = null;
       pendingMoveRef.current = null;
       hideMarker(profileHoverMarkerRef);
@@ -861,6 +999,9 @@ export function DemViewport({
       if (!start) {
         profileStartRef.current = picked;
         profileEndRef.current = null;
+        profileDistanceTextRef.current = null;
+        profileLabelsSignatureRef.current = "";
+        setViewerProfileLabels([]);
         onProfileChange?.(null);
         hideLine(profileLineRef.current);
         hideLine(profileGuideLineRef.current);
@@ -895,7 +1036,9 @@ export function DemViewport({
       setLinePositions(finalLine, terrainLine);
 
       const profile: DemProfileResult = buildLineProfile(start.local, picked.local, grid);
+      profileDistanceTextRef.current = formatDistanceLabel(profile.totalDistanceMeter);
       onProfileChange?.(profile);
+      updateViewerProfileLabels();
 
       if (lastHintRef.current) {
         applyHintState({
@@ -931,7 +1074,7 @@ export function DemViewport({
       }
       pendingMoveRef.current = null;
     };
-  }, [profileEnabled, onProfileChange]);
+  }, [profileEnabled, onProfileChange, updateViewerProfileLabels]);
 
   return (
     <div className="dem-viewport">
@@ -949,6 +1092,20 @@ export function DemViewport({
           {profileHint.text}
         </div>
       ) : null}
+      {profileEnabled && viewerProfileLabels.length
+        ? viewerProfileLabels.map((label) => (
+            <div
+              key={label.key}
+              className={`dem-profile-anchor dem-profile-anchor-${label.key}`}
+              style={{
+                left: `${label.x}px`,
+                top: `${label.y}px`,
+              }}
+            >
+              {label.text}
+            </div>
+          ))
+        : null}
       {elevationRange ? (
         <div className="dem-legend" aria-label="elevation-legend">
           <div className="dem-legend-title">Elevation (m)</div>
