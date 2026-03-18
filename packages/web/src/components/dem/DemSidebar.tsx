@@ -1,16 +1,14 @@
-﻿import { useMemo } from "react";
+import { useMemo } from "react";
 import {
-  CloudUploadOutlined,
-  DownloadOutlined,
-  EllipsisOutlined,
-  FileOutlined,
-  LineChartOutlined,
-  MenuOutlined,
-  PlayCircleOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  TrademarkOutlined,
-} from "@ant-design/icons";
+  RiDownloadLine,
+  RiFileLine,
+  RiMoreLine,
+  RiPlayCircleLine,
+  RiRefreshLine,
+  RiUploadCloud2Line,
+} from "react-icons/ri";
+import { MdMenu, Md3dRotation, MdOutlineAddPhotoAlternate } from "react-icons/md";
+import { TbChartLine } from "react-icons/tb";
 import { Button, Dropdown, Empty, Tag } from "antd";
 import type { MenuProps } from "antd";
 
@@ -87,13 +85,13 @@ export function DemSidebar({
       items: [
         {
           key: "convert",
-          icon: <PlayCircleOutlined />,
+          icon: <RiPlayCircleLine />,
           label: "Terrain 변환",
           disabled: converting,
         },
         {
           key: "download-terrain",
-          icon: <DownloadOutlined />,
+          icon: <RiDownloadLine />,
           label: "Terrain 다운로드",
           disabled: !isTerrainReady || downloading,
         },
@@ -102,7 +100,7 @@ export function DemSidebar({
         },
         {
           key: "download-tif",
-          icon: <FileOutlined />,
+          icon: <RiFileLine />,
           label: "TIF 다운로드",
           disabled: downloading,
         },
@@ -139,7 +137,7 @@ export function DemSidebar({
         onClick={onToggleCollapse}
         aria-label="목록 접기/펼치기"
       >
-        <MenuOutlined />
+        <MdMenu />
       </button>
 
       <div className="dem-sidebar-header">
@@ -152,7 +150,7 @@ export function DemSidebar({
           <Button
             size="small"
             type="text"
-            icon={<ReloadOutlined />}
+            icon={<RiRefreshLine />}
             loading={refreshing}
             onClick={onRefresh}
             aria-label="새로고침"
@@ -161,7 +159,7 @@ export function DemSidebar({
             size="small"
             type="text"
             className={`dem-rotate-btn ${rotating ? "is-active" : ""}`}
-            icon={<TrademarkOutlined spin={rotating} />}
+            icon={<Md3dRotation className={rotating ? "ri-spin" : undefined} />}
             onClick={onToggleRotate}
             aria-label={rotating ? "회전 멈춤" : "회전 시작"}
           />
@@ -169,14 +167,14 @@ export function DemSidebar({
             size="small"
             type="text"
             className={`dem-profile-btn ${profiling ? "is-active" : ""}`}
-            icon={<LineChartOutlined />}
+            icon={<TbChartLine />}
             onClick={onToggleProfiling}
             aria-label={profiling ? "프로파일 측정 모드 종료" : "프로파일 측정 모드 시작"}
           />
           <Button
             size="small"
             type="text"
-            icon={<PlusOutlined />}
+            icon={<MdOutlineAddPhotoAlternate />}
             onClick={onOpenUpload}
             aria-label="DEM 업로드"
           />
@@ -196,7 +194,7 @@ export function DemSidebar({
                     className={`dem-list-compact-item ${isActive ? "is-active" : ""}`}
                     onClick={() => onSelect(item)}
                   >
-                    <CloudUploadOutlined />
+                    <RiUploadCloud2Line />
                   </button>
                 );
               })}
@@ -216,7 +214,7 @@ export function DemSidebar({
                   onKeyDown={(event) => onItemKeyDown(event, item)}
                 >
                   <div className="dem-list-icon">
-                    <CloudUploadOutlined />
+                    <RiUploadCloud2Line />
                   </div>
 
                   <div className="dem-list-main">
@@ -232,7 +230,7 @@ export function DemSidebar({
                           type="text"
                           size="small"
                           className="dem-list-more"
-                          icon={<EllipsisOutlined />}
+                          icon={<RiMoreLine />}
                           onClick={(event) => event.stopPropagation()}
                           onMouseDown={(event) => event.stopPropagation()}
                         />

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Modal, Progress, Spin, Upload, message } from "antd";
 import type { UploadFile } from "antd";
-import { InboxOutlined } from "@ant-design/icons";
+import { RiInboxArchiveLine } from "react-icons/ri";
 
 import { apiPost } from "../../../../tools/api";
 import type { ImportJobItem, ImportUploadResponse } from "../../../../types/project";
@@ -19,6 +19,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
   const [uploadPercent, setUploadPercent] = useState(0);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
   const getSkipReasonLabel = (reason?: string) => {
     if (reason === "duplicate_file_name") {
       return "duplicate file name";
@@ -35,10 +36,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
 
     const key = `retry-${jobId}`;
     message.loading({ content: "Retrying import...", key });
-    apiPost<{ items: ImportJobItem[] }>(
-      `/api/v1/import/${jobId}/retry`,
-      { job_id: jobId } 
-    )
+    apiPost<{ items: ImportJobItem[] }>(`/api/v1/import/${jobId}/retry`, { job_id: jobId })
       .then(() => {
         message.success({ content: "Import retry started.", key });
         setRefreshKey((prev) => prev + 1);
@@ -78,6 +76,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
         setUploadPercent(Math.round((event.loaded / event.total) * 100));
       }
     };
+
     xhr.onload = () => {
       let response: ImportUploadResponse | null = null;
       try {
@@ -93,7 +92,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
         if (skipped.length > 0) {
           const preview = skipped
             .slice(0, 5)
-            .map((item) => `${item.file_name} (${getSkipReasonLabel(item.reason)})`)
+            .map((skipItem) => `${skipItem.file_name} (${getSkipReasonLabel(skipItem.reason)})`)
             .join(", ");
           const suffix = skipped.length > 5 ? ` +${skipped.length - 5} more` : "";
           message.warning(
@@ -111,6 +110,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
         setUploading(false);
       }
     };
+
     xhr.onerror = () => {
       message.error("Upload failed.");
       setUploading(false);
@@ -143,6 +143,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
           />
         ) : null}
       </div>
+
       <Modal
         className="import-upload-modal"
         title="업로드"
@@ -167,10 +168,10 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
           style={{ padding: 16 }}
         >
           <p className="ant-upload-drag-icon">
-            <InboxOutlined />
+            <RiInboxArchiveLine />
           </p>
-          <p className="ant-upload-text">IFC 파일을 선택하거나 드래그하여 업로드</p>
-          <p className="ant-upload-hint">여러개의 IFC 파일 지원</p>
+          <p className="ant-upload-text">IFC 파일을 드래그하거나 클릭해 업로드하세요.</p>
+          <p className="ant-upload-hint">여러 개 IFC 파일을 한 번에 올릴 수 있습니다.</p>
         </Upload.Dragger>
 
         {uploading ? (
@@ -194,10 +195,10 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
             }}
             disabled={uploading}
           >
-            닫기
+            취소
           </Button>
           <Button type="primary" onClick={handleUpload} disabled={uploading}>
-            임포트 시작
+            업로드 시작
           </Button>
         </div>
       </Modal>

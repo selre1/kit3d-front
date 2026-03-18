@@ -480,8 +480,8 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
 }
 
 function hintText(start: DemProfilePick | null, end: DemProfilePick | null) {
-  if (!start) return "클릭하여 시작점을 지정하세요.";
-  if (start && !end) return "클릭하여 종료점을 지정하세요.";
+  if (!start) return "클릭하여 P1점을 지정하세요.";
+  if (start && !end) return "클릭하여 P2점을 지정하세요.";
   return "측정이 완료되었습니다. 초기화 후 다시 측정하세요.";
 }
 
@@ -572,17 +572,17 @@ export function DemViewport({
     const endPos = projectToViewport(endAnchor, camera, renderer);
     const distancePos = projectToViewport(distanceAnchor, camera, renderer);
     if (startPos) {
-      setOverlayLabel(startLabelRef.current, startPos.x + 10, startPos.y - 10, "START");
+      setOverlayLabel(startLabelRef.current, startPos.x, startPos.y, "P1");
     } else {
       hideOverlayLabel(startLabelRef.current);
     }
     if (endPos) {
-      setOverlayLabel(endLabelRef.current, endPos.x + 10, endPos.y - 10, "END");
+      setOverlayLabel(endLabelRef.current, endPos.x, endPos.y, "P2");
     } else {
       hideOverlayLabel(endLabelRef.current);
     }
     if (distancePos) {
-      setOverlayLabel(distanceLabelRef.current, distancePos.x, distancePos.y - 14, distanceText);
+      setOverlayLabel(distanceLabelRef.current, distancePos.x, distancePos.y - 10, distanceText);
     } else {
       hideOverlayLabel(distanceLabelRef.current);
     }

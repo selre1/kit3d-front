@@ -1,5 +1,5 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { UploadOutlined } from "@ant-design/icons";
+import { useEffect, useMemo, useState } from "react";
+import { RiUploadCloud2Line } from "react-icons/ri";
 import { Modal, Upload } from "antd";
 import type { UploadFile, UploadProps } from "antd";
 
@@ -69,7 +69,7 @@ export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUplo
       <div className="dem-upload-section">
         <Upload.Dragger {...uploadProps}>
           <p className="ant-upload-drag-icon">
-            <UploadOutlined />
+            <RiUploadCloud2Line />
           </p>
           <p className="ant-upload-text">DEM(.tif/.tiff) 파일을 선택하세요</p>
           <p className="ant-upload-hint">업로드 후 목록에 추가되고 즉시 미리보기가 적용됩니다.</p>

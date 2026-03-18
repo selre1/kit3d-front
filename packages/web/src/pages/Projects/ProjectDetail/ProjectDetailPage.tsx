@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Tabs } from "antd";
-import {DatabaseFilled, SwapOutlined} from "@ant-design/icons";
+import { RiDatabase2Fill, RiSwapLine } from "react-icons/ri";
 import { useParams, useSearchParams } from "react-router-dom";
 
 import { apiGet } from "../../../tools/api";
@@ -16,21 +16,19 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
   const { id } = useParams();
   const projectId = useMemo(() => id ?? "", [id]);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeKey =
-    searchParams.get("tab") === "conversion" ? "conversion" : "import";
-  const [project, setProject] = useState<Project | null>(null);
+  const activeKey = searchParams.get("tab") === "conversion" ? "conversion" : "import";
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     onProjectLoaded?.(null);
     if (!projectId) return;
+
     let active = true;
     setLoading(true);
     apiGet<Project[]>("/api/v1/project/list")
       .then((data) => {
         if (!active) return;
         const found = data.find((item) => item.project_id === projectId) || null;
-        setProject(found);
         onProjectLoaded?.(found);
       })
       .finally(() => {
@@ -44,42 +42,34 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
   }, [projectId, onProjectLoaded]);
 
   return (
-    <>
-      {/* <div className="page-title">{project?.name}</div> */}
-      {/* <div className="page-subtitle">{project?.description || "No description"}</div> */}
-
-
-        <Tabs
-          activeKey={activeKey}
-          type="card"
-          //centered
-          onChange={(key) => {
-            const next = new URLSearchParams(searchParams);
-            next.set("tab", key);
-            setSearchParams(next, { replace: true });
-          }}
-          items={[
-            {
-              key: "import",
-              label: "임포트",
-              children: (
-                <ProjectImportTab
-                  projectId={projectId}
-                  loading={loading}
-                  isActive={activeKey === "import"}
-                />
-              ),
-              icon: <DatabaseFilled/>
-            },
-            {
-              key: "conversion",
-              label: "변환",
-              children: <ProjectConversionTab projectId={projectId} />,
-              icon: <SwapOutlined />
-            },
-          ]}
-        />
-    
-    </>
+    <Tabs
+      activeKey={activeKey}
+      type="card"
+      onChange={(key) => {
+        const next = new URLSearchParams(searchParams);
+        next.set("tab", key);
+        setSearchParams(next, { replace: true });
+      }}
+      items={[
+        {
+          key: "import",
+          label: "임포트",
+          icon: <RiDatabase2Fill />,
+          children: (
+            <ProjectImportTab
+              projectId={projectId}
+              loading={loading}
+              isActive={activeKey === "import"}
+            />
+          ),
+        },
+        {
+          key: "conversion",
+          label: "변환",
+          icon: <RiSwapLine />,
+          children: <ProjectConversionTab projectId={projectId} />,
+        },
+      ]}
+    />
   );
 }

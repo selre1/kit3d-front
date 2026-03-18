@@ -1,18 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import {
-  Button,
-  Checkbox,
-  Empty,
-  Spin,
-} from "antd";
-import {
-  AimOutlined,
-  AppstoreOutlined,
-  FullscreenOutlined,
-  FullscreenExitOutlined,
-} from "@ant-design/icons";
-
+  RiAppsLine,
+  RiFocus3Line,
+  RiFullscreenExitLine,
+  RiFullscreenLine,
+} from "react-icons/ri";
+import { Button, Checkbox, Empty, Spin } from "antd";
 import * as OBC from "@thatopen/components";
 import * as THREE from "three";
 
@@ -339,7 +333,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
               aria-label="Toggle IFC classifier"
               aria-expanded={classifierOpen}
             >
-              <AppstoreOutlined />
+              <RiAppsLine />
             </button>
           </div>
           <div
@@ -368,14 +362,14 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
           <Button
             size="small"
             type="text"
-            icon={<AimOutlined />}
+            icon={<RiFocus3Line />}
             onClick={handleFitModel}
             disabled={!modelReady}
           />
           <Button
             size="small"
             type="text"
-            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            icon={isFullscreen ? <RiFullscreenExitLine /> : <RiFullscreenLine />}
             onClick={handleToggleFullscreen}
           />
         </div>
@@ -395,7 +389,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
               setViewerEnabled(true);
             }}
           >
-            {"IFC 미리보기"}
+            {"Enable IFC loading"}
           </Button>
         </div>
       ) : null}

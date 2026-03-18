@@ -1,10 +1,10 @@
-﻿import { Layout, Menu } from "antd";
+import { Layout, Menu } from "antd";
 import {
-  EnvironmentOutlined,
-  HomeOutlined,
-  ProjectOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
+  RiHome5Line,
+  RiSettings3Line,
+} from "react-icons/ri";
+import { BsBadge3D } from "react-icons/bs";
+import { MdOutlineTerrain } from "react-icons/md";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
@@ -48,10 +48,10 @@ export function AppShell({
           onClick={({ key }) => onMenuChange(key)}
           inlineCollapsed={collapsed}
           items={[
-            { key: "home", label: "홈", icon: <HomeOutlined /> },
-            { key: "projects", label: "3D 모델", icon: <ProjectOutlined /> },
-            { key: "dem", label: "지형 모델", icon: <EnvironmentOutlined /> },
-            { key: "settings", label: "설정", icon: <SettingOutlined /> },
+            { key: "home", label: "홈", icon: <RiHome5Line /> },
+            { key: "projects", label: "3D 모델", icon: <BsBadge3D /> },
+            { key: "dem", label: "지형 모델", icon: <MdOutlineTerrain /> },
+            { key: "settings", label: "설정", icon: <RiSettings3Line /> },
           ]}
         />
       </Sider>

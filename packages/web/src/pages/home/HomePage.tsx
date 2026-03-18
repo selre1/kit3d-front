@@ -13,7 +13,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { RiSearchLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 
 import { apiGet } from "../../tools/api";
@@ -170,7 +170,7 @@ export function HomaPage() {
                           key="open"
                           type="primary"
                           shape="circle"
-                          icon={<SearchOutlined />}
+                          icon={<RiSearchLine />}
                           onClick={() => goToProject(item.project_id, "import")}
                         />,
                       ]}
@@ -201,7 +201,7 @@ export function HomaPage() {
                             key="open"
                             type="primary"
                             shape="circle"
-                            icon={<SearchOutlined />}
+                            icon={<RiSearchLine />}
                             onClick={() => goToProject(item.project_id, "import")}
                           />,
                         ]}

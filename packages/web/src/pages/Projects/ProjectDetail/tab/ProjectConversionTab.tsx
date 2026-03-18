@@ -18,16 +18,15 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  CloudDownloadOutlined,
-  ExclamationCircleOutlined,
-  InfoCircleOutlined,
-  SearchOutlined,
-  SyncOutlined,
-} from "@ant-design/icons";
-
+  RiCheckboxCircleLine,
+  RiCloseCircleLine,
+  RiDownloadCloud2Line,
+  RiErrorWarningLine,
+  RiInformationLine,
+  RiLoader4Line,
+  RiSearchLine,
+  RiTimeLine,
+} from "react-icons/ri";
 import { apiGet, apiPost } from "../../../../tools/api";
 import { CesiumFeatureInspector, CesiumViewer } from "../../../../components/cesium";
 import type { CesiumFeatureInfo } from "../../../../components/cesium";
@@ -72,15 +71,15 @@ function statusTagProps(status?: string | null) {
   const normalized = status?.toUpperCase();
   switch (normalized) {
     case "DONE":
-      return { color: "success", icon: <CheckCircleOutlined /> };
+      return { color: "success", icon: <RiCheckboxCircleLine /> };
     case "RUNNING":
-      return { color: "processing", icon: <SyncOutlined spin /> };
+      return { color: "processing", icon: <RiLoader4Line className="ri-spin" /> };
     case "FAILED":
-      return { color: "error", icon: <CloseCircleOutlined /> };
+      return { color: "error", icon: <RiCloseCircleLine /> };
     case "PENDING":
-      return { color: "warning", icon: <ExclamationCircleOutlined /> };
+      return { color: "warning", icon: <RiErrorWarningLine /> };
     default:
-      return { color: "default", icon: <ClockCircleOutlined /> };
+      return { color: "default", icon: <RiTimeLine /> };
   }
 }
 
@@ -296,7 +295,7 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
             <Button
               size="small"
               shape="circle"
-              icon={<SearchOutlined />}
+              icon={<RiSearchLine />}
               disabled={!record.tile_job_id}
               onClick={() => {
                 setSelectedTile(record);
@@ -316,7 +315,7 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
             <Button
               size="small"
               shape="circle"
-              icon={<CloudDownloadOutlined />}
+              icon={<RiDownloadCloud2Line />}
               loading={downloadingId === record.tile_job_id}
               disabled={!record.tile_job_id || record.status?.toUpperCase() !== "DONE"}
               onClick={(event) => handleDownload(event, record)}
@@ -334,7 +333,7 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
             <Button
               size="small"
               shape="circle"
-              icon={<InfoCircleOutlined />}
+              icon={<RiInformationLine />}
               disabled={!record.tile_job_id}
               onClick={() => {
                 setInfoTile(record);
@@ -663,3 +662,5 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
     </Flex>
   );
 }
+
+

@@ -1,5 +1,5 @@
 import { Flex, Slider, Switch } from "antd";
-import { GlobalOutlined } from "@ant-design/icons";
+import { RiEarthLine } from "react-icons/ri";
 import type { CesiumSpecialEvn } from "./useCesiumSpecialEvn";
 import { CesiumToolbarPopover } from "./CesiumToolbarPopover";
 
@@ -17,7 +17,7 @@ export function CesiumTerrainControls({
   };
 
   return (
-    <CesiumToolbarPopover icon={<GlobalOutlined />} title="지형 설정">
+    <CesiumToolbarPopover icon={<RiEarthLine />} title="지형 설정">
       <Flex className="cesium-terrain-panel" vertical gap={10}>
         <Flex className="cesium-toolbar-field" align="center" gap={6}>
           <span>활성화</span>

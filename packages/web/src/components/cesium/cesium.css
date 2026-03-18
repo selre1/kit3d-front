@@ -70,6 +70,11 @@
   justify-content: center;
 }
 
+.cesium-toolbar-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .cesium-toolbar-icon:hover {
   color: #f5f7ff;
   background: rgba(255, 255, 255, 0.12);
@@ -140,6 +145,11 @@
 }
 
 .cesium-measure-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cesium-measure-reset svg {
   width: 14px;
   height: 14px;
 }

@@ -13,6 +13,19 @@
   border-right: none;
 }
 
+.app-sider .ant-menu .ant-menu-item .ant-menu-item-icon,
+.app-sider .ant-menu .ant-menu-submenu-title .ant-menu-item-icon {
+  min-width: 20px;
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+.app-sider .ant-menu .ant-menu-item .ant-menu-item-icon svg,
+.app-sider .ant-menu .ant-menu-submenu-title .ant-menu-item-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
 
 .brand {
   display: flex;
@@ -848,8 +861,11 @@
   box-shadow: none;
 }
 
-.ifc-viewer-toolbar .ant-btn.ant-btn-text .anticon {
-  font-size: 19px;
+.ifc-viewer-toolbar .ant-btn.ant-btn-text .anticon,
+.ifc-viewer-toolbar .ant-btn.ant-btn-text svg {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
 }
 
 .ifc-viewer-toolbar .ant-btn.ant-btn-text:hover {
@@ -888,8 +904,24 @@
   transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
-.viewer-sidebar-icon .anticon {
-  font-size: 19px;
+.viewer-sidebar-icon .anticon,
+.viewer-sidebar-icon svg {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.ri-spin {
+  animation: ri-spin 1s linear infinite;
+}
+
+@keyframes ri-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .viewer-sidebar-icon:hover {

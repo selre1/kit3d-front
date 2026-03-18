@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Card, Empty, Space, Tag, Typography } from "antd";
-import { CloseOutlined, DeleteOutlined, LineChartOutlined } from "@ant-design/icons";
-
+import { RiCloseLine, RiDeleteBinLine} from "react-icons/ri";
+import { TbChartLine } from "react-icons/tb";
 import type { DemProfileResult } from "./types";
 
 const { Text } = Typography;
@@ -278,7 +278,7 @@ export function DemProfilePanel({
         className="dem-profile-card"
         title={
           <Space size={8}>
-            <LineChartOutlined />
+            <TbChartLine />
             <span>지형 고도 프로파일 분석</span>
           </Space>
         }
@@ -287,7 +287,7 @@ export function DemProfilePanel({
             <Button
               size="small"
               type="text"
-              icon={<DeleteOutlined />}
+              icon={<RiDeleteBinLine />}
               onClick={onClear}
               disabled={!profile}
             >
@@ -296,7 +296,7 @@ export function DemProfilePanel({
             <Button
               size="small"
               type="text"
-              icon={<CloseOutlined />}
+              icon={<RiCloseLine />}
               onClick={onClose}
               aria-label="close-profile-panel"
             >
@@ -309,10 +309,10 @@ export function DemProfilePanel({
           <div className="dem-profile-content">
             <div className="dem-profile-metrics">
               <Tag className="dem-profile-metric dem-profile-metric-start">
-                시작 {formatValue(profile.startElevation)} m
+                P1 {formatValue(profile.startElevation)} m
               </Tag>
               <Tag className="dem-profile-metric dem-profile-metric-end">
-                종료 {formatValue(profile.endElevation)} m
+                P2 {formatValue(profile.endElevation)} m
               </Tag>
               <Tag className="dem-profile-metric">거리 {formatValue(profile.totalDistanceKm, 2)} km</Tag>
               <Tag className="dem-profile-metric">최저 {formatValue(profile.minElevation)} m</Tag>

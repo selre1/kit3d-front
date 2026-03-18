@@ -138,7 +138,7 @@
 .dem-legend {
   position: absolute;
   right: 16px;
-  top: 16px;
+  bottom: 16px;
   z-index: 8;
   width: 80px;
   padding: 8px 8px 10px;
@@ -212,14 +212,14 @@
 
 .dem-sidebar-toggle-handle {
   position: absolute;
-  right: -8px;
+  right: -12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 40px;
+  width: 20px;
+  height: 50px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-left: none;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 8px 8px 0;
   background: rgba(10, 14, 22, 0.95);
   color: #dbe4f6;
   display: inline-flex;
@@ -228,6 +228,13 @@
   cursor: pointer;
   z-index: 7;
   transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dem-sidebar-toggle-handle svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .dem-sidebar-toggle-handle:hover {
@@ -264,11 +271,16 @@
 .dem-sidebar-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 5px;
 }
 
 .dem-sidebar-actions .ant-btn {
   color: #dbe4f6;
+}
+
+.dem-sidebar-actions .ant-btn svg {
+  width: 17px;
+  height: 17px;
 }
 
 .dem-sidebar-actions .ant-btn:hover {
@@ -384,7 +396,7 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .dem-list-main {
@@ -412,6 +424,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.dem-list-more.ant-btn svg {
+  width: 15px;
+  height: 15px;
 }
 
 .dem-list-more.ant-btn:hover {
@@ -563,6 +580,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  justify-content: center;
 }
 
 .dem-profile-metric.ant-tag {
@@ -587,8 +605,8 @@
 .dem-profile-chart {
   position: relative;
   cursor: crosshair;
-  height: 148px;
-  padding: 6px 6px 18px 24px;
+  height: 200px;
+  padding: 0;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background:
@@ -745,13 +763,18 @@
   .dem-sidebar-toggle-handle {
     left: 50%;
     right: auto;
-    top: -10px;
+    top: -11px;
     transform: translateX(-50%);
-    width: 42px;
-    height: 18px;
+    width: 50px;
+    height: 20px;
     border-left: 1px solid rgba(255, 255, 255, 0.16);
     border-bottom: none;
-    border-radius: 7px 7px 0 0;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .dem-sidebar-toggle-handle svg {
+    width: 20px;
+    height: 20px;
   }
 
   .dem-sidebar-body {
@@ -788,7 +811,7 @@
 
   .dem-legend {
     right: 12px;
-    top: 12px;
+    bottom: 12px;
     width: 74px;
     padding: 7px 7px 9px;
   }
@@ -818,7 +841,7 @@
 
   .dem-profile-chart {
     height: 120px;
-    padding: 4px;
+    padding: 0;
     border-radius: 8px;
   }
 
