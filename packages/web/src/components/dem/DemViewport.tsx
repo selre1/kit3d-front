@@ -417,7 +417,7 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
 
 function hintText(start: DemProfilePick | null, end: DemProfilePick | null) {
   if (!start) return "클릭하여 시작점을 지정하세요.";
-  if (start && !end) return "클릭하여 끝점을 지정하세요.";
+  if (start && !end) return "클릭하여 종료점을 지정하세요.";
   return "측정이 완료되었습니다. 초기화 후 다시 측정하세요.";
 }
 

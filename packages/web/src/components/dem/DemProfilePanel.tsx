@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Card, Empty, Space, Tag, Typography } from "antd";
 import { CloseOutlined, DeleteOutlined, LineChartOutlined } from "@ant-design/icons";
 
@@ -230,6 +230,12 @@ export function DemProfilePanel({
           padY
         )
       : null;
+  const hoverPointOverlayStyle = hoverPoint
+    ? {
+        left: `${(hoverPoint.x / chartWidth) * 100}%`,
+        top: `${(hoverPoint.y / chartHeight) * 100}%`,
+      }
+    : null;
 
   return (
     <div className="dem-profile-panel">
@@ -268,15 +274,15 @@ export function DemProfilePanel({
         {profile ? (
           <div className="dem-profile-content">
             <div className="dem-profile-metrics">
+              <Tag className="dem-profile-metric dem-profile-metric-start">
+                시작 {formatValue(profile.startElevation)} m
+              </Tag>
+              <Tag className="dem-profile-metric dem-profile-metric-end">
+                종료 {formatValue(profile.endElevation)} m
+              </Tag>
               <Tag className="dem-profile-metric">거리 {formatValue(profile.totalDistanceKm, 2)} km</Tag>
               <Tag className="dem-profile-metric">최저 {formatValue(profile.minElevation)} m</Tag>
               <Tag className="dem-profile-metric">최고 {formatValue(profile.maxElevation)} m</Tag>
-              <Tag className="dem-profile-metric dem-profile-metric-start">
-                시작점 {formatValue(profile.startElevation)} m
-              </Tag>
-              <Tag className="dem-profile-metric dem-profile-metric-end">
-                끝점 {formatValue(profile.endElevation)} m
-              </Tag>
             </div>
 
             <div
@@ -322,15 +328,15 @@ export function DemProfilePanel({
                       y2={chartHeight - padY}
                       className="dem-profile-hover-line"
                     />
-                    <circle
-                      cx={hoverPoint.x}
-                      cy={hoverPoint.y}
-                      r={4.2}
-                      className="dem-profile-hover-point"
-                    />
                   </>
                 ) : null}
               </svg>
+              {hoverPointOverlayStyle ? (
+                <div
+                  className="dem-profile-hover-dot"
+                  style={hoverPointOverlayStyle}
+                />
+              ) : null}
               <div className="dem-profile-label dem-profile-label-max">
                 {formatValue(profile.maxElevation)} m
               </div>

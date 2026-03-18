@@ -1,4 +1,4 @@
-.dem-page-full {
+﻿.dem-page-full {
   position: relative;
   width: 100%;
   height: 100%;
@@ -634,7 +634,7 @@
 
 .dem-profile-label-min {
   left: 6px;
-  bottom: 24px;
+  bottom: 8px;
 }
 
 .dem-profile-label-start {
@@ -761,12 +761,9 @@
     width: 100%;
     padding: 6px 8px 8px;
     border-radius: 0;
-}
+  }
 
-  .dem-profile-card .ant-card-head,
-  .dem-profile-metrics,
-  .dem-profile-label,
-  .dem-profile-hover-readout {
+  .dem-profile-metrics{
     display: none;
   }
 
