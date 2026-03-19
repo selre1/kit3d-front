@@ -1,15 +1,28 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Breadcrumb } from "antd";
 import { BrowserRouter, Link, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 
 import { AppShell } from "./components/layout/AppShell";
-import { HomaPage } from "./pages/home/HomePage";
-import { ProjectsPage } from "./pages/Projects/ProjectsPage";
-import { SettingsPage } from "./pages/Settings/SettingsPage";
-import { ProjectDetailPage } from "./pages/Projects/ProjectDetail/ProjectDetailPage";
-import { DemPage } from "./pages/Dem/DemPage";
 import type { Project } from "./types/project";
 import "./App.css";
+
+const HomaPage = lazy(() =>
+  import("./pages/home/HomePage").then((module) => ({ default: module.HomaPage }))
+);
+const ProjectsPage = lazy(() =>
+  import("./pages/Projects/ProjectsPage").then((module) => ({ default: module.ProjectsPage }))
+);
+const SettingsPage = lazy(() =>
+  import("./pages/Settings/SettingsPage").then((module) => ({ default: module.SettingsPage }))
+);
+const ProjectDetailPage = lazy(() =>
+  import("./pages/Projects/ProjectDetail/ProjectDetailPage").then((module) => ({
+    default: module.ProjectDetailPage,
+  }))
+);
+const DemPage = lazy(() =>
+  import("./pages/Dem/DemPage").then((module) => ({ default: module.DemPage }))
+);
 
 function AppRoutes() {
   const location = useLocation();
@@ -80,17 +93,19 @@ function AppRoutes() {
       headerTitle={<Breadcrumb className="header-breadcrumb" items={breadcrumbItems} />}
       contentClassName={activeMenu === "dem" ? "page page-dem" : "page"}
     >
-      <Routes>
-        <Route path="/" element={<HomaPage />} />
-        <Route path="/home" element={<HomaPage />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route
-          path="/projects/:id"
-          element={<ProjectDetailPage onProjectLoaded={setCurrentProject} />}
-        />
-        <Route path="/dem" element={<DemPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-      </Routes>
+      <Suspense fallback={<div className="page" />}>
+        <Routes>
+          <Route path="/" element={<HomaPage />} />
+          <Route path="/home" element={<HomaPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route
+            path="/projects/:id"
+            element={<ProjectDetailPage onProjectLoaded={setCurrentProject} />}
+          />
+          <Route path="/dem" element={<DemPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Routes>
+      </Suspense>
     </AppShell>
   );
 }
