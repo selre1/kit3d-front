@@ -5,7 +5,7 @@
   file_path: string;
   file_url?: string | null;
   file_size?: number | null;
-  uploaded_at?: string | null;
+  created_at?: string | null;
   status?: string | null;
   terrain_status?: string | null;
   terrain_download_url?: string | null;

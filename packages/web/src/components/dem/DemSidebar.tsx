@@ -254,7 +254,7 @@ export function DemSidebar({
                       <Dropdown
                         menu={buildItemMenu(item)}
                         trigger={["click"]}
-                        placement="bottomRight"
+                        placement="bottomLeft"
                         overlayClassName="dem-item-dropdown"
                       >
                         <Button
@@ -268,7 +268,7 @@ export function DemSidebar({
                       </Dropdown>
                     </div>
 
-                    <div className="dem-list-meta">{item.uploaded_at || "just now"}</div>
+                    <div className="dem-list-meta">{item.created_at || "just now"}</div>
                     <Tag color={status.color}>{status.text}</Tag>
                   </div>
                 </div>

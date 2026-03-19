@@ -13,16 +13,38 @@ import type {
   DemUploadSubmitPayload,
   DemViewerSource,
 } from "../../components/dem";
-import { apiPost } from "../../tools/api";
+import { apiGet, apiPost } from "../../tools/api";
 import "../../components/dem/dem.css";
 
 type DemUploadApiResponse = {
+  dem_id: string;
   file_name: string;
   file_path: string;
   file_url: string;
   file_size: number;
-  uploaded_at: string;
+  created_at: string;
 };
+
+type DemListApiResponse = {
+  dem_id: string;
+  file_name: string;
+  file_path: string;
+  file_url: string;
+  created_at: string;
+};
+
+function toViewerFileSource(file: File): DemViewerSource {
+  return {
+    mode: "file",
+    file,
+    object_url: URL.createObjectURL(file),
+  };
+}
+
+function upsertDemItem(items: DemItem[], nextItem: DemItem): DemItem[] {
+  const withoutCurrent = items.filter((item) => item.dem_id !== nextItem.dem_id);
+  return [nextItem, ...withoutCurrent];
+}
 
 function triggerDownload(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -64,7 +86,7 @@ function parseErrorMessage(error: unknown) {
   }
 }
 
-function formatUploadedAt(value?: string | null) {
+function formatCreatedAt(value?: string | null) {
   if (!value) return "Latest version · just now";
   return `Latest version · ${value}`;
 }
@@ -86,6 +108,43 @@ export function DemPage() {
   const [profileResetKey, setProfileResetKey] = useState(0);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const selectDem = useCallback((item: DemItem) => {
+    setSelectedDemId(item.dem_id);
+  }, []);
+
+  const applyDemItems = useCallback((items: DemItem[]) => {
+    setDemItems(items);
+    setSelectedDemId((prev) => {
+      if (!items.length) return null;
+      if (prev && items.some((item) => item.dem_id === prev)) return prev;
+      return items[0].dem_id;
+    });
+  }, []);
+
+  const fetchDemList = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const data = await apiGet<DemListApiResponse[]>("/api/v1/dem/list?limit=100&offset=0");
+      const nextItems: DemItem[] = (data || []).map((item) => ({
+        dem_id: item.dem_id,
+        file_name: item.file_name,
+        file_path: item.file_path,
+        file_url: item.file_url,
+        created_at: formatCreatedAt(item.created_at),
+        status: "UPLOADED",
+        terrain_status: "UPLOADED",
+      }));
+      applyDemItems(nextItems);
+    } catch (error) {
+      message.error(parseErrorMessage(error));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [applyDemItems]);
+
+  useEffect(() => {
+    void fetchDemList();
+  }, [fetchDemList]);
 
   const selectedDem = useMemo(
     () => demItems.find((item) => item.dem_id === selectedDemId) ?? null,
@@ -132,6 +191,12 @@ export function DemPage() {
     profileHoverHandlerRef.current(null);
   }, [selectedDemId]);
 
+  const resetProfile = useCallback(() => {
+    setProfileResult(null);
+    setProfileResetKey((prev) => prev + 1);
+    profileHoverHandlerRef.current(null);
+  }, []);
+
   useEffect(() => {
     if (!profiling) return;
     const media = window.matchMedia("(max-width: 900px)");
@@ -147,10 +212,9 @@ export function DemPage() {
     };
   }, [profiling]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    setRefreshing(false);
-  };
+  const handleRefresh = useCallback(async () => {
+    await fetchDemList();
+  }, [fetchDemList]);
 
   const handleUploadSubmit = async (payload: DemUploadSubmitPayload) => {
     setUploading(true);
@@ -159,8 +223,7 @@ export function DemPage() {
       formData.append("file", payload.file);
 
       const response = await apiPost<DemUploadApiResponse>("/api/v1/dem/upload", formData);
-      const now = Date.now();
-      const demId = `dem-${now}`;
+      const demId = (response.dem_id || "").trim() || `dem-${Date.now()}`;
 
       const nextItem: DemItem = {
         dem_id: demId,
@@ -168,26 +231,22 @@ export function DemPage() {
         file_path: response.file_path,
         file_url: response.file_url,
         file_size: response.file_size,
-        uploaded_at: formatUploadedAt(response.uploaded_at),
+        created_at: formatCreatedAt(response.created_at),
         status: "UPLOADED",
         terrain_status: "UPLOADED",
       };
 
-      setDemItems((prev) => [nextItem, ...prev]);
-      setSelectedDemId(nextItem.dem_id);
+      setDemItems((prev) => upsertDemItem(prev, nextItem));
+      setSelectedDemId(demId);
       setViewerSources((prev) => {
-        const oldSource = prev[nextItem.dem_id];
+        const oldSource = prev[demId];
         if (oldSource?.mode === "file") {
           URL.revokeObjectURL(oldSource.object_url);
         }
 
         return {
           ...prev,
-          [nextItem.dem_id]: {
-            mode: "file",
-            file: payload.file,
-            object_url: URL.createObjectURL(payload.file),
-          },
+          [demId]: toViewerFileSource(payload.file),
         };
       });
 
@@ -276,7 +335,7 @@ export function DemPage() {
           rotating={autoRotate}
           profiling={profiling}
           viewerMeta={viewerMeta}
-          onSelect={(item) => setSelectedDemId(item.dem_id)}
+          onSelect={selectDem}
           onRefresh={handleRefresh}
           onOpenUpload={() => setUploadModalOpen(true)}
           onToggleRotate={() => setAutoRotate((prev) => !prev)}
@@ -308,15 +367,9 @@ export function DemPage() {
                 profile={profileResult}
                 onClose={() => {
                   setProfiling(false);
-                  setProfileResult(null);
-                  setProfileResetKey((prev) => prev + 1);
-                  profileHoverHandlerRef.current(null);
+                  resetProfile();
                 }}
-                onClear={() => {
-                  setProfileResult(null);
-                  setProfileResetKey((prev) => prev + 1);
-                  profileHoverHandlerRef.current(null);
-                }}
+                onClear={resetProfile}
                 onHoverRatioChange={handleProfileHoverRatioChange}
               />
             </div>

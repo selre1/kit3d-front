@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { RiUploadCloud2Line } from "react-icons/ri";
 import { Modal, Upload } from "antd";
 import type { UploadFile, UploadProps } from "antd";
@@ -14,29 +14,23 @@ type DemUploadModalProps = {
 
 export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUploadModalProps) {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-
-  useEffect(() => {
-    if (!open) {
-      setFileList([]);
-    }
-  }, [open]);
-
-  const canSubmit = useMemo(() => fileList.length > 0, [fileList.length]);
+  const hasFile = fileList.length > 0;
 
   const uploadProps: UploadProps = {
     multiple: false,
     maxCount: 1,
     accept: ".tif,.tiff",
+    disabled: submitting,
     beforeUpload: (file) => {
+      const nextFile: UploadFile = {
+        uid: file.uid,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        originFileObj: file,
+      };
       setFileList([
-        {
-          uid: `${Date.now()}`,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          originFileObj: file,
-          status: "done",
-        },
+        nextFile,
       ]);
       return false;
     },
@@ -60,10 +54,11 @@ export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUplo
       width="auto"
       okText="업로드"
       cancelText="취소"
-      okButtonProps={{ disabled: !canSubmit, loading: submitting }}
+      okButtonProps={{ disabled: !hasFile, loading: submitting }}
       className="dem-upload-modal"
       title="DEM 업로드"
       destroyOnClose
+      afterClose={() => setFileList([])}
       centered
     >
       <div className="dem-upload-section">
