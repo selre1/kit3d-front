@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback ,type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
@@ -58,6 +58,8 @@ type ProfileHintState = {
 const PROFILE_LIFT = 1.4;
 const CLICK_MOVE_THRESHOLD = 6;
 const HINT_MIN_MOVE_PX = 2;
+const MAX_RENDER_FPS = 45;
+const MAX_PIXEL_RATIO = 1.5;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -502,6 +504,7 @@ export function DemViewport({
   const controlsRef = useRef<OrbitControls | null>(null);
   const terrainRef = useRef<THREE.Mesh | null>(null);
   const frameRef = useRef<number>(0);
+  const needsRenderRef = useRef<boolean>(true);
   const gridDataRef = useRef<DemGridData | null>(null);
   const profileLineRef = useRef<THREE.Line | null>(null);
   const profileGuideLineRef = useRef<THREE.Line | null>(null);
@@ -537,6 +540,10 @@ export function DemViewport({
     }
     return source.url;
   }, [seedKey, source]);
+
+  const requestRender = useCallback(() => {
+    needsRenderRef.current = true;
+  }, []);
 
   const updateViewerProfileLabels = useCallback(() => {
     if (!profileEnabledRef.current) {
@@ -606,9 +613,12 @@ export function DemViewport({
     camera.lookAt(scene.position);
     cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: false,
+      powerPreference: "high-performance",
+    });
     renderer.setClearColor(0xd3d3d3);
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
@@ -619,6 +629,10 @@ export function DemViewport({
     controls.minDistance = 0;
     controls.autoRotate = autoRotate;
     controlsRef.current = controls;
+    const handleControlsChange = () => {
+      requestRender();
+    };
+    controls.addEventListener("change", handleControlsChange);
 
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(500, 1000, 250);
@@ -640,16 +654,41 @@ export function DemViewport({
       rendererRef.current.setSize(width, height);
       cameraRef.current.aspect = width / Math.max(1, height);
       cameraRef.current.updateProjectionMatrix();
+      requestRender();
     });
     resizeObserver.observe(container);
 
-    const renderLoop = () => {
-      controls.update();
+    const frameInterval = 1000 / MAX_RENDER_FPS;
+    let lastRenderTime = 0;
+
+    const renderLoop = (time: number) => {
+      if (document.hidden) {
+        frameRef.current = window.requestAnimationFrame(renderLoop);
+        return;
+      }
+
+      if (time - lastRenderTime < frameInterval) {
+        frameRef.current = window.requestAnimationFrame(renderLoop);
+        return;
+      }
+      lastRenderTime = time;
+
+      const shouldRender = controls.autoRotate || needsRenderRef.current;
+      if (!shouldRender) {
+        frameRef.current = window.requestAnimationFrame(renderLoop);
+        return;
+      }
+
+      if (controls.autoRotate || controls.enableDamping) {
+        controls.update();
+      }
       updateViewerProfileLabels();
       renderer.render(scene, camera);
+      needsRenderRef.current = false;
       frameRef.current = window.requestAnimationFrame(renderLoop);
     };
-    renderLoop();
+    requestRender();
+    frameRef.current = window.requestAnimationFrame(renderLoop);
 
     return () => {
       resizeObserver.disconnect();
@@ -674,8 +713,10 @@ export function DemViewport({
         profileHoverMarkerRef
       );
 
+      controls.removeEventListener("change", handleControlsChange);
       controls.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
       if (renderer.domElement.parentElement === container) {
         container.removeChild(renderer.domElement);
       }
@@ -690,7 +731,8 @@ export function DemViewport({
   useEffect(() => {
     if (!controlsRef.current) return;
     controlsRef.current.autoRotate = autoRotate;
-  }, [autoRotate]);
+    requestRender();
+  }, [autoRotate, requestRender]);
 
   useEffect(() => {
     profileEnabledRef.current = profileEnabled;
@@ -699,7 +741,8 @@ export function DemViewport({
       hideOverlayLabel(endLabelRef.current);
       hideOverlayLabel(distanceLabelRef.current);
     }
-  }, [profileEnabled]);
+    requestRender();
+  }, [profileEnabled, requestRender]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -731,6 +774,7 @@ export function DemViewport({
         profileEndMarkerRef,
         profileHoverMarkerRef
       );
+    requestRender();
 
     if (!source) {
       setLoading(false);
@@ -742,6 +786,7 @@ export function DemViewport({
       hideOverlayLabel(distanceLabelRef.current);
       gridDataRef.current = null;
       onMetaChange?.(null);
+      requestRender();
       return;
     }
 
@@ -762,6 +807,7 @@ export function DemViewport({
         gridDataRef.current = grid;
         setElevationRange({ min: minElevation, max: maxElevation });
         onMetaChange?.(sourceMeta);
+        requestRender();
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -782,7 +828,7 @@ export function DemViewport({
       cancelled = true;
       controller.abort();
     };
-  }, [source, sourceKey, onMetaChange, onProfileChange]);
+  }, [source, sourceKey, onMetaChange, onProfileChange, requestRender]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -805,6 +851,7 @@ export function DemViewport({
         profileEndMarkerRef,
         profileHoverMarkerRef
       );
+    requestRender();
 
     setProfileHint((current) => {
       if (!profileEnabled || !current) return null;
@@ -814,7 +861,7 @@ export function DemViewport({
       };
     });
     lastHintRef.current = null;
-  }, [profileResetKey, profileEnabled, onProfileChange]);
+  }, [profileResetKey, profileEnabled, onProfileChange, requestRender]);
 
   useEffect(() => {
     if (!onProfileHoverHandlerReady) return;
@@ -836,6 +883,7 @@ export function DemViewport({
         !Number.isFinite(ratio)
       ) {
         hideMarker(profileHoverMarkerRef);
+        requestRender();
         return;
       }
 
@@ -851,6 +899,7 @@ export function DemViewport({
       };
 
       setMarkerAtLocalPoint(profileHoverMarkerRef, localPoint, grid, terrain, PROFILE_LIFT + 1.1);
+      requestRender();
     };
 
     onProfileHoverHandlerReady(handler);
@@ -858,7 +907,7 @@ export function DemViewport({
     return () => {
       onProfileHoverHandlerReady(() => {});
     };
-  }, [onProfileHoverHandlerReady]);
+  }, [onProfileHoverHandlerReady, requestRender]);
 
   useEffect(() => {
     const renderer = rendererRef.current;
@@ -874,6 +923,7 @@ export function DemViewport({
       pointerDownRef.current = null;
       pendingMoveRef.current = null;
       hideMarker(profileHoverMarkerRef);
+      requestRender();
       return;
     }
 
@@ -980,6 +1030,7 @@ export function DemViewport({
           guideLine,
           fillGuideLinePositions(guidePositionsRef.current, start.world, picked.world)
         );
+        requestRender();
       });
     };
 
@@ -1029,6 +1080,7 @@ export function DemViewport({
             text: hintText(profileStartRef.current, profileEndRef.current),
           });
         }
+        requestRender();
         return;
       }
 
@@ -1047,6 +1099,7 @@ export function DemViewport({
       profileDistanceTextRef.current = formatDistanceLabel(profile.totalDistanceMeter);
       onProfileChange?.(profile);
       updateViewerProfileLabels();
+      requestRender();
 
       if (lastHintRef.current) {
         applyHintState({
@@ -1082,7 +1135,7 @@ export function DemViewport({
       }
       pendingMoveRef.current = null;
     };
-  }, [profileEnabled, onProfileChange, updateViewerProfileLabels]);
+  }, [profileEnabled, onProfileChange, updateViewerProfileLabels, requestRender]);
 
   return (
     <div className="dem-viewport">

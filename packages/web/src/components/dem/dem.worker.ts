@@ -26,7 +26,8 @@ type WorkerFailure = {
   error: string;
 };
 
-const MAX_GRID_SIZE = 1024;
+const MAX_GRID_SIDE = 768;
+const MAX_GRID_CELLS = 280_000;
 
 function parseNoDataValue(raw: unknown): number | null {
   if (raw === null || raw === undefined) return null;
@@ -44,8 +45,12 @@ function sampleRaster(
   height: number,
   noDataValue: number | null
 ) {
-  const stepX = Math.max(1, Math.ceil(width / MAX_GRID_SIZE));
-  const stepY = Math.max(1, Math.ceil(height / MAX_GRID_SIZE));
+  // Limit both side length and total sampled cells to avoid huge client meshes.
+  const sideScale = Math.max(width / MAX_GRID_SIDE, height / MAX_GRID_SIDE);
+  const cellScale = Math.sqrt((width * height) / MAX_GRID_CELLS);
+  const step = Math.max(1, Math.ceil(Math.max(sideScale, cellScale)));
+  const stepX = step;
+  const stepY = step;
 
   const sampledWidth = Math.floor((width - 1) / stepX) + 1;
   const sampledHeight = Math.floor((height - 1) / stepY) + 1;

@@ -100,7 +100,7 @@ export function DemPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [converting, setConverting] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
   const [profiling, setProfiling] = useState(false);
   const [viewerMeta, setViewerMeta] = useState<string[] | null>(null);
   const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
