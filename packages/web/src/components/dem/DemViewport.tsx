@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useCallback, type MutableRefObject } from "react";
+﻿import { useEffect, useMemo, useRef, useState, useCallback, type MutableRefObject } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
@@ -14,6 +14,10 @@ type DemViewportProps = {
   seedKey?: string | null;
   source?: DemViewerSource | null;
   autoRotate?: boolean;
+  maxGridSize?: number;
+  heightScale?: number;
+  verticalExaggeration?: number;
+  elevationGamma?: number;
   profileEnabled?: boolean;
   profileResetKey?: number;
   onMetaChange?: (meta: string[] | null) => void;
@@ -406,7 +410,11 @@ async function readSourceArrayBuffer(source: DemViewerSource, signal: AbortSigna
 
 async function runDemWorker(
   arrayBuffer: ArrayBuffer,
-  signal: AbortSignal
+  signal: AbortSignal,
+  maxGridSize: number,
+  heightScale: number,
+  verticalExaggeration: number,
+  elevationGamma: number
 ): Promise<DemWorkerResponse> {
   return new Promise((resolve, reject) => {
     if (signal.aborted) {
@@ -442,13 +450,30 @@ async function runDemWorker(
       reject(new Error(event.message || "DEM worker failed"));
     };
 
-    worker.postMessage({ arrayBuffer }, [arrayBuffer]);
+    worker.postMessage(
+      { arrayBuffer, maxGridSize, heightScale, verticalExaggeration, elevationGamma },
+      [arrayBuffer]
+    );
   });
 }
 
-async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
+async function loadDemFromSource(
+  source: DemViewerSource,
+  signal: AbortSignal,
+  maxGridSize: number,
+  heightScale: number,
+  verticalExaggeration: number,
+  elevationGamma: number
+) {
   const arrayBuffer = await readSourceArrayBuffer(source, signal);
-  const workerResult = await runDemWorker(arrayBuffer, signal);
+  const workerResult = await runDemWorker(
+    arrayBuffer,
+    signal,
+    maxGridSize,
+    heightScale,
+    verticalExaggeration,
+    elevationGamma
+  );
   if (!workerResult.ok) {
     throw new Error(workerResult.error);
   }
@@ -459,7 +484,7 @@ async function loadDemFromSource(source: DemViewerSource, signal: AbortSignal) {
   const terrain = createDemMesh(workerResult.width, workerResult.height, zValues, colors);
   const metaItems = [
     `SIZE: ${workerResult.sourceWidth}x${workerResult.sourceHeight}`,
-    `CRS : ${workerResult.crs || "알 수 없음"}`,
+    `CRS : ${workerResult.crs || "정보 없음"}`,
     `GSD : ${workerResult.resolutionXMeter.toFixed(2)}m x ${workerResult.resolutionYMeter.toFixed(2)}m`,
   ];
 
@@ -491,6 +516,10 @@ export function DemViewport({
   seedKey,
   source,
   autoRotate = true,
+  maxGridSize = 1024,
+  heightScale = 0.02,
+  verticalExaggeration = 30.0,
+  elevationGamma = 1.5,
   profileEnabled = false,
   profileResetKey = 0,
   onMetaChange,
@@ -796,7 +825,14 @@ export function DemViewport({
     setLoading(true);
     setViewerError(null);
 
-    loadDemFromSource(source, controller.signal)
+    loadDemFromSource(
+      source,
+      controller.signal,
+      maxGridSize,
+      heightScale,
+      verticalExaggeration,
+      elevationGamma
+    )
       .then(({ terrain, sourceMeta, minElevation, maxElevation, grid }) => {
         if (cancelled) {
           disposeMesh(terrain);
@@ -817,7 +853,7 @@ export function DemViewport({
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        setViewerError("DEM 렌더링에 실패했습니다.");
+        setViewerError("DEM 로드에 실패했습니다.");
       })
       .finally(() => {
         if (cancelled) return;
@@ -828,7 +864,17 @@ export function DemViewport({
       cancelled = true;
       controller.abort();
     };
-  }, [source, sourceKey, onMetaChange, onProfileChange, requestRender]);
+  }, [
+    source,
+    sourceKey,
+    maxGridSize,
+    heightScale,
+    verticalExaggeration,
+    elevationGamma,
+    onMetaChange,
+    onProfileChange,
+    requestRender,
+  ]);
 
   useEffect(() => {
     const scene = sceneRef.current;
@@ -1140,7 +1186,7 @@ export function DemViewport({
   return (
     <div className="dem-viewport">
       <div ref={containerRef} className="dem-canvas" />
-      {loading ? <div className="dem-status">지형 렌더링 중...</div> : null}
+      {loading ? (<div className="dem-status">{"지형 데이터 로딩 중..."}</div>) : null}
       {viewerError ? <div className="dem-error">{viewerError}</div> : null}
       {profileEnabled && profileHint ? (
         <div
@@ -1169,3 +1215,5 @@ export function DemViewport({
     </div>
   );
 }
+
+

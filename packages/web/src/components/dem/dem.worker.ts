@@ -1,8 +1,12 @@
-import { fromArrayBuffer } from "geotiff";
+﻿import { fromArrayBuffer } from "geotiff";
 import * as THREE from "three";
 
 type WorkerRequest = {
   arrayBuffer: ArrayBuffer;
+  maxGridSize?: number;
+  heightScale?: number;
+  verticalExaggeration?: number;
+  elevationGamma?: number;
 };
 
 type WorkerSuccess = {
@@ -26,8 +30,7 @@ type WorkerFailure = {
   error: string;
 };
 
-const MAX_GRID_SIDE = 768;
-const MAX_GRID_CELLS = 280_000;
+const MAX_GRID_SIZE = 2048;
 
 function parseNoDataValue(raw: unknown): number | null {
   if (raw === null || raw === undefined) return null;
@@ -43,14 +46,12 @@ function sampleRaster(
   raster: ArrayLike<number>,
   width: number,
   height: number,
-  noDataValue: number | null
+  noDataValue: number | null,
+  maxGridSize: number
 ) {
-  // Limit both side length and total sampled cells to avoid huge client meshes.
-  const sideScale = Math.max(width / MAX_GRID_SIDE, height / MAX_GRID_SIDE);
-  const cellScale = Math.sqrt((width * height) / MAX_GRID_CELLS);
-  const step = Math.max(1, Math.ceil(Math.max(sideScale, cellScale)));
-  const stepX = step;
-  const stepY = step;
+  const safeMaxGridSize = Math.max(64, Math.floor(maxGridSize) || MAX_GRID_SIZE);
+  const stepX = Math.max(1, Math.ceil(width / safeMaxGridSize));
+  const stepY = Math.max(1, Math.ceil(height / safeMaxGridSize));
 
   const sampledWidth = Math.floor((width - 1) / stepX) + 1;
   const sampledHeight = Math.floor((height - 1) / stepY) + 1;
@@ -188,22 +189,29 @@ function resolveCrs(tifImage: any) {
     }
   }
 
-  return "알 수 없음";
+  return "정보 없음";
 }
 
 function buildDemAttributes(
   sampled: Float32Array,
   minElevation: number,
-  maxElevation: number
+  maxElevation: number,
+  heightScale: number,
+  verticalExaggeration: number,
+  elevationGamma: number
 ) {
   const count = sampled.length;
   const zValues = new Float32Array(count);
   const colors = new Float32Array(count * 3);
 
   const elevationRange = Math.max(maxElevation - minElevation, 1);
-  const heightScale = 0.02;
-  const verticalExaggeration = 30.0;
-  const elevationGamma = 1.5;
+  const safeHeightScale = Number.isFinite(heightScale) && heightScale > 0 ? heightScale : 0.02;
+  const safeVerticalExaggeration =
+    Number.isFinite(verticalExaggeration) && verticalExaggeration > 0
+      ? verticalExaggeration
+      : 30.0;
+  const safeElevationGamma =
+    Number.isFinite(elevationGamma) && elevationGamma > 0 ? elevationGamma : 1.5;
 
   const lowColor = new THREE.Color(0x2b8a3e);
   const midColor = new THREE.Color(0xd9c27a);
@@ -213,9 +221,9 @@ function buildDemAttributes(
   for (let index = 0; index < count; index += 1) {
     const safeValue = sampled[index];
     const elevationRatio = (safeValue - minElevation) / elevationRange;
-    const weightedRatio = Math.pow(elevationRatio, elevationGamma);
+    const weightedRatio = Math.pow(elevationRatio, safeElevationGamma);
     const normalizedHeight =
-      weightedRatio * elevationRange * heightScale * verticalExaggeration;
+      weightedRatio * elevationRange * safeHeightScale * safeVerticalExaggeration;
     zValues[index] = -normalizedHeight;
 
     if (weightedRatio < 0.5) {
@@ -233,7 +241,13 @@ function buildDemAttributes(
   return { zValues, colors };
 }
 
-async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSuccess> {
+async function buildWorkerPayload(
+  arrayBuffer: ArrayBuffer,
+  maxGridSize = MAX_GRID_SIZE,
+  heightScale = 0.02,
+  verticalExaggeration = 30.0,
+  elevationGamma = 1.5
+): Promise<WorkerSuccess> {
   const rawTiff = await fromArrayBuffer(arrayBuffer);
   const tifImage = await rawTiff.getImage();
 
@@ -245,7 +259,13 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
     : (dataResult as ArrayLike<number>);
 
   const noDataValue = parseNoDataValue(tifImage.getGDALNoData());
-  const sampledData = sampleRaster(raster, sourceWidth, sourceHeight, noDataValue);
+  const sampledData = sampleRaster(
+    raster,
+    sourceWidth,
+    sourceHeight,
+    noDataValue,
+    maxGridSize
+  );
   const crs = resolveCrs(tifImage);
   const metersPerPixel = resolveMetersPerPixel(tifImage);
   const resolutionXMeter = Math.max(0.01, metersPerPixel.x * sampledData.stepX);
@@ -253,7 +273,10 @@ async function buildWorkerPayload(arrayBuffer: ArrayBuffer): Promise<WorkerSucce
   const attributes = buildDemAttributes(
     sampledData.sampled,
     sampledData.minElevation,
-    sampledData.maxElevation
+    sampledData.maxElevation,
+    heightScale,
+    verticalExaggeration,
+    elevationGamma
   );
 
   return {
@@ -277,7 +300,13 @@ const workerScope: any = self;
 
 workerScope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   try {
-    const payload = await buildWorkerPayload(event.data.arrayBuffer);
+    const payload = await buildWorkerPayload(
+      event.data.arrayBuffer,
+      event.data.maxGridSize ?? MAX_GRID_SIZE,
+      event.data.heightScale ?? 0.02,
+      event.data.verticalExaggeration ?? 30.0,
+      event.data.elevationGamma ?? 1.5
+    );
     workerScope.postMessage(payload, [payload.elevations, payload.zValues, payload.colors]);
   } catch (error) {
     const message =
@@ -286,3 +315,4 @@ workerScope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     workerScope.postMessage(failure);
   }
 };
+

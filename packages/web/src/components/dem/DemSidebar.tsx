@@ -1,13 +1,15 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
+import type { KeyboardEvent } from "react";
 import {
   RiDownloadLine,
   RiFileLine,
   RiMoreLine,
   RiPlayCircleLine,
   RiRefreshLine,
+  RiSettings3Line,
   RiUploadCloud2Line,
 } from "react-icons/ri";
-import { MdMenu, Md3dRotation, MdOutlineAddPhotoAlternate } from "react-icons/md";
+import { Md3dRotation, MdMenu, MdOutlineAddPhotoAlternate } from "react-icons/md";
 import { TbChartLine } from "react-icons/tb";
 import { Button, Dropdown, Empty, Tag, Tooltip } from "antd";
 import type { MenuProps } from "antd";
@@ -32,6 +34,7 @@ type DemSidebarProps = {
   onConvertItem: (item: DemItem) => void;
   onDownloadTerrainItem: (item: DemItem) => void;
   onDownloadTifItem: (item: DemItem) => void;
+  onOpenGridSettings: () => void;
   onToggleCollapse: () => void;
 };
 
@@ -67,6 +70,7 @@ export function DemSidebar({
   onConvertItem,
   onDownloadTerrainItem,
   onDownloadTifItem,
+  onOpenGridSettings,
   onToggleCollapse,
 }: DemSidebarProps) {
   const getTooltipContainer = (trigger: HTMLElement) =>
@@ -76,6 +80,7 @@ export function DemSidebar({
     () => items.find((item) => item.dem_id === selectedDemId) ?? null,
     [items, selectedDemId]
   );
+
   const viewerMetaItems = useMemo(() => {
     if (!viewerMeta) return [];
     return viewerMeta.map((item) => item.trim()).filter(Boolean);
@@ -89,13 +94,13 @@ export function DemSidebar({
         {
           key: "convert",
           icon: <RiPlayCircleLine />,
-          label: "Terrain 변환",
+          label: "타일 변환",
           disabled: converting,
         },
         {
           key: "download-terrain",
           icon: <RiDownloadLine />,
-          label: "Terrain 다운로드",
+          label: "타일 다운로드",
           disabled: !isTerrainReady || downloading,
         },
         {
@@ -125,7 +130,7 @@ export function DemSidebar({
     };
   };
 
-  const onItemKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, item: DemItem) => {
+  const onItemKeyDown = (event: KeyboardEvent<HTMLDivElement>, item: DemItem) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       onSelect(item);
@@ -138,7 +143,7 @@ export function DemSidebar({
         type="button"
         className="dem-sidebar-toggle-handle"
         onClick={onToggleCollapse}
-        aria-label="목록 접기/펼치기"
+        aria-label="목록 토글"
       >
         <MdMenu />
       </button>
@@ -146,10 +151,24 @@ export function DemSidebar({
       <div className="dem-sidebar-header">
         <div className="dem-sidebar-headline">
           <div className="dem-sidebar-title">지형 모델 목록</div>
-          <div className="dem-sidebar-subtitle">{items.length} 개</div>
+          <div className="dem-sidebar-subtitle">{`${items.length}개`}</div>
         </div>
 
         <div className="dem-sidebar-actions">
+          <Tooltip
+            title="설정"
+            placement="top"
+            overlayClassName="dem-action-tooltip"
+            getPopupContainer={getTooltipContainer}
+          >
+            <Button
+              size="small"
+              type="text"
+              icon={<RiSettings3Line />}
+              onClick={onOpenGridSettings}
+              aria-label="설정 열기"
+            />
+          </Tooltip>
           <Tooltip
             title="새로고침"
             placement="top"
@@ -166,7 +185,11 @@ export function DemSidebar({
             />
           </Tooltip>
           <Tooltip
-            title={rotating ? "회전 멈춤" : "회전 시작"}
+            title={
+              rotating
+                ? "회전 멈추기"
+                : "회전 시작"
+            }
             placement="top"
             overlayClassName="dem-action-tooltip"
             getPopupContainer={getTooltipContainer}
@@ -177,11 +200,19 @@ export function DemSidebar({
               className={`dem-rotate-btn ${rotating ? "is-active" : ""}`}
               icon={<Md3dRotation className={rotating ? "ri-spin" : undefined} />}
               onClick={onToggleRotate}
-              aria-label={rotating ? "회전 멈춤" : "회전 시작"}
+              aria-label={
+                rotating
+                  ? "회전 멈추기"
+                  : "회전 시작"
+              }
             />
           </Tooltip>
           <Tooltip
-            title={profiling ? "프로파일 분석 종료" : "프로파일 분석 시작"}
+            title={
+              profiling
+                ? "프로파일 분석 종료"
+                : "프로파일 분석 시작"
+            }
             placement="top"
             overlayClassName="dem-action-tooltip"
             getPopupContainer={getTooltipContainer}
@@ -192,7 +223,11 @@ export function DemSidebar({
               className={`dem-profile-btn ${profiling ? "is-active" : ""}`}
               icon={<TbChartLine />}
               onClick={onToggleProfiling}
-              aria-label={profiling ? "프로파일 분석 종료" : "프로파일 분석 시작"}
+              aria-label={
+                profiling
+                  ? "프로파일 분석 종료"
+                  : "프로파일 분석 시작"
+              }
             />
           </Tooltip>
           <Tooltip
@@ -277,7 +312,10 @@ export function DemSidebar({
           )
         ) : (
           <div className="dem-list-empty">
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="DEM이 없습니다." />
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="DEM이 없습니다."
+            />
           </div>
         )}
       </div>
@@ -297,3 +335,5 @@ export function DemSidebar({
     </aside>
   );
 }
+
+

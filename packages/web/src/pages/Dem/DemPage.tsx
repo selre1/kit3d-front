@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { message } from "antd";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { Button, InputNumber, Modal, Space, Tooltip, message } from "antd";
 
 import {
   DemProfilePanel,
@@ -87,8 +88,8 @@ function parseErrorMessage(error: unknown) {
 }
 
 function formatCreatedAt(value?: string | null) {
-  if (!value) return "Latest version · just now";
-  return `Latest version · ${value}`;
+  if (!value) return "최신 버전 · 방금 전";
+  return `최신 버전 · ${value}`;
 }
 
 export function DemPage() {
@@ -100,7 +101,16 @@ export function DemPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [converting, setConverting] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  const [autoRotate, setAutoRotate] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [maxGridSize, setMaxGridSize] = useState(1024);
+  const [heightScale, setHeightScale] = useState(0.02);
+  const [verticalExaggeration, setVerticalExaggeration] = useState(30.0);
+  const [elevationGamma, setElevationGamma] = useState(1.5);
+  const [gridSettingOpen, setGridSettingOpen] = useState(false);
+  const [gridSettingValue, setGridSettingValue] = useState(1024);
+  const [heightScaleValue, setHeightScaleValue] = useState(0.02);
+  const [verticalExaggerationValue, setVerticalExaggerationValue] = useState(30.0);
+  const [elevationGammaValue, setElevationGammaValue] = useState(1.5);
   const [profiling, setProfiling] = useState(false);
   const [viewerMeta, setViewerMeta] = useState<string[] | null>(null);
   const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
@@ -265,7 +275,7 @@ export function DemPage() {
       message.warning("다른 DEM 변환이 진행 중입니다.");
       return;
     }
-    message.info("Terrain 변환 API 연동 전입니다.");
+    message.info("Terrain 변환 API 연동 예정입니다.");
   };
 
   const handleDownloadTerrainItem = async (item: DemItem) => {
@@ -322,6 +332,40 @@ export function DemPage() {
     profileHoverHandlerRef.current(ratio);
   }, []);
 
+  const openGridSettingModal = useCallback(() => {
+    setGridSettingValue(maxGridSize);
+    setHeightScaleValue(heightScale);
+    setVerticalExaggerationValue(verticalExaggeration);
+    setElevationGammaValue(elevationGamma);
+    setGridSettingOpen(true);
+  }, [maxGridSize, heightScale, verticalExaggeration, elevationGamma]);
+
+  const applyGridSetting = useCallback(() => {
+    const nextGridSize = Math.max(64, Math.floor(gridSettingValue || maxGridSize));
+    const nextHeightScale = Math.max(0.0001, Number(heightScaleValue) || heightScale);
+    const nextVerticalExaggeration = Math.max(
+      0.01,
+      Number(verticalExaggerationValue) || verticalExaggeration
+    );
+    const nextElevationGamma = Math.max(0.01, Number(elevationGammaValue) || elevationGamma);
+
+    setMaxGridSize(nextGridSize);
+    setHeightScale(nextHeightScale);
+    setVerticalExaggeration(nextVerticalExaggeration);
+    setElevationGamma(nextElevationGamma);
+    setGridSettingOpen(false);
+    message.success("Viewer settings applied.");
+  }, [
+    gridSettingValue,
+    maxGridSize,
+    heightScaleValue,
+    heightScale,
+    verticalExaggerationValue,
+    verticalExaggeration,
+    elevationGammaValue,
+    elevationGamma,
+  ]);
+
   return (
     <div className="dem-page-full">
       <div className="dem-layout">
@@ -343,6 +387,7 @@ export function DemPage() {
           onConvertItem={handleConvertItem}
           onDownloadTerrainItem={handleDownloadTerrainItem}
           onDownloadTifItem={handleDownloadTifItem}
+          onOpenGridSettings={openGridSettingModal}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         />
 
@@ -352,6 +397,10 @@ export function DemPage() {
               seedKey={selectedDem?.dem_id || null}
               source={selectedViewerSource}
               autoRotate={autoRotate}
+              maxGridSize={maxGridSize}
+              heightScale={heightScale}
+              verticalExaggeration={verticalExaggeration}
+              elevationGamma={elevationGamma}
               profileEnabled={profiling}
               profileResetKey={profileResetKey}
               onMetaChange={handleMetaChange}
@@ -382,6 +431,96 @@ export function DemPage() {
         onCancel={() => setUploadModalOpen(false)}
         onSubmit={handleUploadSubmit}
       />
+      <Modal
+        className="dem-settings-modal"
+        title="DEM 뷰어 설정"
+        open={gridSettingOpen}
+        onCancel={() => setGridSettingOpen(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setGridSettingOpen(false)}>
+            취소
+          </Button>,
+          <Button key="apply" type="primary" onClick={applyGridSetting}>
+            적용
+          </Button>,
+        ]}
+      >
+        <Space direction="vertical" size={12} className="dem-settings-panel">
+          <div className="dem-setting-item">
+            <div className="dem-setting-head">
+              <span className="dem-setting-name">DEM mesh resolution</span>
+              <Tooltip title="지형 메시의 가로/세로 샘플 최대 크기입니다. 값이 클수록 선명하지만 무거워집니다.">
+                <ExclamationCircleOutlined className="dem-setting-help" />
+              </Tooltip>
+            </div>
+            <InputNumber
+              min={64}
+              max={4096}
+              step={64}
+              value={gridSettingValue}
+              onChange={(value) => setGridSettingValue(Number(value) || 1024)}
+              className="dem-setting-input"
+            />
+            <div className="dem-setting-desc">권장값: 512 ~ 1536</div>
+          </div>
+
+          <div className="dem-setting-item">
+            <div className="dem-setting-head">
+              <span className="dem-setting-name">heightScale</span>
+              <Tooltip title="고도값을 실제 높이로 변환하는 기본 배율입니다.">
+                <ExclamationCircleOutlined className="dem-setting-help" />
+              </Tooltip>
+            </div>
+            <InputNumber
+              min={0.0001}
+              max={1}
+              step={0.001}
+              value={heightScaleValue}
+              onChange={(value) => setHeightScaleValue(Number(value) || 0.02)}
+              className="dem-setting-input"
+            />
+            <div className="dem-setting-desc">작게: 평탄, 크게: 전체 높이 증가</div>
+          </div>
+
+          <div className="dem-setting-item">
+            <div className="dem-setting-head">
+              <span className="dem-setting-name">verticalExaggeration</span>
+              <Tooltip title="세로 과장 배율입니다. 값이 커질수록 높낮이 대비가 강조됩니다.">
+                <ExclamationCircleOutlined className="dem-setting-help" />
+              </Tooltip>
+            </div>
+            <InputNumber
+              min={0.01}
+              max={200}
+              step={0.5}
+              value={verticalExaggerationValue}
+              onChange={(value) => setVerticalExaggerationValue(Number(value) || 30)}
+              className="dem-setting-input"
+            />
+            <div className="dem-setting-desc">권장값: 10 ~ 60</div>
+          </div>
+
+          <div className="dem-setting-item">
+            <div className="dem-setting-head">
+              <span className="dem-setting-name">elevationGamma</span>
+              <Tooltip title="고도 분포 곡률입니다. 1보다 크면 고지대가 더 강조됩니다.">
+                <ExclamationCircleOutlined className="dem-setting-help" />
+              </Tooltip>
+            </div>
+            <InputNumber
+              min={0.01}
+              max={5}
+              step={0.05}
+              value={elevationGammaValue}
+              onChange={(value) => setElevationGammaValue(Number(value) || 1.5)}
+              className="dem-setting-input"
+            />
+            <div className="dem-setting-desc">권장값: 1.0 ~ 2.0</div>
+          </div>
+        </Space>
+      </Modal>
     </div>
   );
 }
+
+

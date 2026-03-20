@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { RiUploadCloud2Line } from "react-icons/ri";
 import { Modal, Upload } from "antd";
 import type { UploadFile, UploadProps } from "antd";
@@ -12,7 +12,12 @@ type DemUploadModalProps = {
   onSubmit: (payload: DemUploadSubmitPayload) => Promise<void>;
 };
 
-export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUploadModalProps) {
+export function DemUploadModal({
+  open,
+  submitting,
+  onCancel,
+  onSubmit,
+}: DemUploadModalProps) {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const hasFile = fileList.length > 0;
 
@@ -29,9 +34,7 @@ export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUplo
         type: file.type,
         originFileObj: file,
       };
-      setFileList([
-        nextFile,
-      ]);
+      setFileList([nextFile]);
       return false;
     },
     onRemove: () => {
@@ -66,10 +69,17 @@ export function DemUploadModal({ open, submitting, onCancel, onSubmit }: DemUplo
           <p className="ant-upload-drag-icon">
             <RiUploadCloud2Line />
           </p>
-          <p className="ant-upload-text">DEM(.tif/.tiff) 파일을 선택하세요</p>
-          <p className="ant-upload-hint">업로드 후 목록에 추가되고 즉시 미리보기가 적용됩니다.</p>
+          <p className="ant-upload-text">
+            DEM(.tif/.tiff) 파일을 선택해주세요.
+          </p>
+          <p className="ant-upload-hint">
+            업로드 후 목록에 추가되고 즉시
+            미리보기가 적용됩니다.
+          </p>
         </Upload.Dragger>
       </div>
     </Modal>
   );
 }
+
+
