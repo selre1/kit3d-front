@@ -39,7 +39,7 @@ type DemSidebarProps = {
 };
 
 function statusMeta(status?: string | null) {
-  const normalized = (status || "UPLOADED").toUpperCase();
+  const normalized = (status || "").toUpperCase();
   if (normalized === "COMPLETED" || normalized === "DONE") {
     return { color: "success", text: "COMPLETED" };
   }
@@ -49,7 +49,27 @@ function statusMeta(status?: string | null) {
   if (normalized === "FAILED" || normalized === "ERROR") {
     return { color: "error", text: "FAILED" };
   }
-  return { color: "default", text: "UPLOADED" };
+  return null;
+}
+
+function formatFileSize(bytes?: number | null) {
+  if (!Number.isFinite(bytes) || (bytes ?? 0) < 0) {
+    return "파일 크기 없음";
+  }
+
+  const safeBytes = bytes as number;
+  if (safeBytes < 1024) return `${safeBytes} B`;
+
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = safeBytes / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+
+  const digits = value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(digits)} ${units[unitIndex]}`;
 }
 
 export function DemSidebar({
@@ -303,8 +323,8 @@ export function DemSidebar({
                       </Dropdown>
                     </div>
 
-                    <div className="dem-list-meta">{item.created_at || "just now"}</div>
-                    <Tag color={status.color}>{status.text}</Tag>
+                    <div className="dem-list-meta">{formatFileSize(item.file_size)}</div>
+                    {status ? <Tag color={status.color}>{status.text}</Tag> : null}
                   </div>
                 </div>
               );

@@ -31,6 +31,7 @@ type DemListApiResponse = {
   file_name: string;
   file_path: string;
   file_url: string;
+  file_size?: number | null;
   created_at: string;
 };
 
@@ -87,11 +88,6 @@ function parseErrorMessage(error: unknown) {
   }
 }
 
-function formatCreatedAt(value?: string | null) {
-  if (!value) return "최신 버전 · 방금 전";
-  return `최신 버전 · ${value}`;
-}
-
 export function DemPage() {
   const [demItems, setDemItems] = useState<DemItem[]>([]);
   const [viewerSources, setViewerSources] = useState<Record<string, DemViewerSource>>({});
@@ -107,10 +103,12 @@ export function DemPage() {
   const [verticalExaggeration, setVerticalExaggeration] = useState(30.0);
   const [elevationGamma, setElevationGamma] = useState(1.5);
   const [gridSettingOpen, setGridSettingOpen] = useState(false);
-  const [gridSettingValue, setGridSettingValue] = useState(1024);
-  const [heightScaleValue, setHeightScaleValue] = useState(0.02);
-  const [verticalExaggerationValue, setVerticalExaggerationValue] = useState(30.0);
-  const [elevationGammaValue, setElevationGammaValue] = useState(1.5);
+  const [gridSettingValue, setGridSettingValue] = useState<number | null>(1024);
+  const [heightScaleValue, setHeightScaleValue] = useState<number | null>(0.02);
+  const [verticalExaggerationValue, setVerticalExaggerationValue] = useState<number | null>(
+    30.0
+  );
+  const [elevationGammaValue, setElevationGammaValue] = useState<number | null>(1.5);
   const [profiling, setProfiling] = useState(false);
   const [viewerMeta, setViewerMeta] = useState<string[] | null>(null);
   const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
@@ -140,7 +138,8 @@ export function DemPage() {
         file_name: item.file_name,
         file_path: item.file_path,
         file_url: item.file_url,
-        created_at: formatCreatedAt(item.created_at),
+        file_size: item.file_size,
+        created_at: item.created_at,
         status: "UPLOADED",
         terrain_status: "UPLOADED",
       }));
@@ -241,7 +240,7 @@ export function DemPage() {
         file_path: response.file_path,
         file_url: response.file_url,
         file_size: response.file_size,
-        created_at: formatCreatedAt(response.created_at),
+        created_at: response.created_at,
         status: "UPLOADED",
         terrain_status: "UPLOADED",
       };
@@ -341,13 +340,16 @@ export function DemPage() {
   }, [maxGridSize, heightScale, verticalExaggeration, elevationGamma]);
 
   const applyGridSetting = useCallback(() => {
-    const nextGridSize = Math.max(64, Math.floor(gridSettingValue || maxGridSize));
-    const nextHeightScale = Math.max(0.0001, Number(heightScaleValue) || heightScale);
+    const nextGridSize = Math.max(64, Math.floor(gridSettingValue ?? maxGridSize));
+    const nextHeightScale = Math.max(0.0001, Number(heightScaleValue ?? heightScale));
     const nextVerticalExaggeration = Math.max(
       0.01,
-      Number(verticalExaggerationValue) || verticalExaggeration
+      Number(verticalExaggerationValue ?? verticalExaggeration)
     );
-    const nextElevationGamma = Math.max(0.01, Number(elevationGammaValue) || elevationGamma);
+    const nextElevationGamma = Math.max(
+      0.01,
+      Number(elevationGammaValue ?? elevationGamma)
+    );
 
     setMaxGridSize(nextGridSize);
     setHeightScale(nextHeightScale);
@@ -458,7 +460,7 @@ export function DemPage() {
               max={4096}
               step={64}
               value={gridSettingValue}
-              onChange={(value) => setGridSettingValue(Number(value) || 1024)}
+              onChange={(value) => setGridSettingValue(value)}
               className="dem-setting-input"
             />
             <div className="dem-setting-desc">권장값: 512 ~ 1536</div>
@@ -476,7 +478,7 @@ export function DemPage() {
               max={1}
               step={0.001}
               value={heightScaleValue}
-              onChange={(value) => setHeightScaleValue(Number(value) || 0.02)}
+              onChange={(value) => setHeightScaleValue(value)}
               className="dem-setting-input"
             />
             <div className="dem-setting-desc">작게: 평탄, 크게: 전체 높이 증가</div>
@@ -494,7 +496,7 @@ export function DemPage() {
               max={200}
               step={0.5}
               value={verticalExaggerationValue}
-              onChange={(value) => setVerticalExaggerationValue(Number(value) || 30)}
+              onChange={(value) => setVerticalExaggerationValue(value)}
               className="dem-setting-input"
             />
             <div className="dem-setting-desc">권장값: 10 ~ 60</div>
@@ -512,7 +514,7 @@ export function DemPage() {
               max={5}
               step={0.05}
               value={elevationGammaValue}
-              onChange={(value) => setElevationGammaValue(Number(value) || 1.5)}
+              onChange={(value) => setElevationGammaValue(value)}
               className="dem-setting-input"
             />
             <div className="dem-setting-desc">권장값: 1.0 ~ 2.0</div>
