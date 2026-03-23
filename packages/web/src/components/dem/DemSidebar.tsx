@@ -11,7 +11,7 @@ import {
 } from "react-icons/ri";
 import { Md3dRotation, MdMenu, MdOutlineAddPhotoAlternate } from "react-icons/md";
 import { TbChartLine } from "react-icons/tb";
-import { Button, Dropdown, Empty, Tag, Tooltip } from "antd";
+import { Button, Dropdown, Empty, Badge, Tooltip } from "antd";
 import type { MenuProps } from "antd";
 
 import type { DemItem } from "./types";
@@ -38,27 +38,35 @@ type DemSidebarProps = {
   onToggleCollapse: () => void;
 };
 
-function statusMeta(status?: string | null) {
+type StatusBadge = {
+  status: "default" | "processing" | "success" | "error" | "warning";
+  text: string;
+};
+
+function statusMeta(status?: string | null): StatusBadge {
   const normalized = (status || "").toUpperCase();
   if (normalized === "READY" || !normalized) {
-    return { color: "default", text: "READY" };
+    return { status: "default", text: "변환 준비완료" };
   }
-  if (normalized === "COMPLETED" || normalized === "DONE") {
-    return { color: "success", text: "COMPLETED" };
+  if (normalized === "DONE" || normalized === "COMPLETED") {
+    return { status: "success", text: "변환 완료" };
   }
   if (normalized === "PENDING") {
-    return { color: "default", text: "PENDING" };
+    return { status: "processing", text: "변환 대기열" };
   }
-  if (normalized === "ZIPPING") {
-    return { color: "processing", text: "ZIPPING" };
-  }
+  
   if (normalized === "RUNNING" || normalized === "PROCESSING") {
-    return { color: "processing", text: "RUNNING" };
+    return { status: "processing", text: "변환 중" };
   }
+
+  if (normalized === "ZIPPING") {
+    return { status: "warning", text: "압축 중" };
+  }
+
   if (normalized === "FAILED" || normalized === "ERROR") {
-    return { color: "error", text: "FAILED" };
+    return { status: "error", text: "변환 실패" };
   }
-  return { color: "default", text: normalized };
+  return { status: "default", text: normalized };
 }
 
 function formatFileSize(bytes?: number | null) {
@@ -79,6 +87,14 @@ function formatFileSize(bytes?: number | null) {
 
   const digits = value >= 100 ? 0 : value >= 10 ? 1 : 2;
   return `${value.toFixed(digits)} ${units[unitIndex]}`;
+}
+
+function formatCreatedAt(createdAt?: string | null) {
+  const text = (createdAt || "").trim();
+  if (!text) {
+    return "생성일 없음";
+  }
+  return text;
 }
 
 export function DemSidebar({
@@ -118,7 +134,9 @@ export function DemSidebar({
   const buildItemMenu = (item: DemItem): MenuProps => {
     const normalizedTerrainStatus = (item.terrain_status || "").toUpperCase();
     const hasTerrainDownloadUrl = Boolean((item.terrain_download_url || "").trim());
-    const isTerrainReady = normalizedTerrainStatus === "DONE" && hasTerrainDownloadUrl;
+    const isTerrainFinished =
+      normalizedTerrainStatus === "DONE" || normalizedTerrainStatus === "COMPLETED";
+    const isTerrainReady = isTerrainFinished && hasTerrainDownloadUrl;
     const isTerrainInProgress =
       normalizedTerrainStatus === "PENDING" ||
       normalizedTerrainStatus === "RUNNING" ||
@@ -129,8 +147,8 @@ export function DemSidebar({
         {
           key: "convert",
           icon: <RiPlayCircleLine />,
-          label: "타일 변환",
-          disabled: converting || isTerrainInProgress,
+          label: "Terrain 변환",
+          disabled: converting || isTerrainInProgress || isTerrainFinished,
         },
         {
           key: "download-terrain",
@@ -339,9 +357,9 @@ export function DemSidebar({
                     </div>
 
                     <div className="dem-list-meta">
-                      {`${item.created_at} · ${formatFileSize(item.file_size)}`}
+                      {`${formatCreatedAt(item.created_at)} · ${formatFileSize(item.file_size)}`}
                     </div>
-                    {status ? <Tag color={status.color}>{status.text}</Tag> : null}
+                    <Badge status={status.status} text={status.text} />
                   </div>
                 </div>
               );
