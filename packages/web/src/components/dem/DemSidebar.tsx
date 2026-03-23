@@ -107,7 +107,13 @@ export function DemSidebar({
   }, [viewerMeta]);
 
   const buildItemMenu = (item: DemItem): MenuProps => {
-    const isTerrainReady = (item.terrain_status || "").toUpperCase() === "COMPLETED";
+    const normalizedTerrainStatus = (item.terrain_status || "").toUpperCase();
+    const hasTerrainDownloadUrl = Boolean((item.terrain_download_url || "").trim());
+    const isTerrainReady = normalizedTerrainStatus === "DONE" && hasTerrainDownloadUrl;
+    const isTerrainInProgress =
+      normalizedTerrainStatus === "PENDING" ||
+      normalizedTerrainStatus === "RUNNING" ||
+      normalizedTerrainStatus === "ZIPPING";
 
     return {
       items: [
@@ -115,7 +121,7 @@ export function DemSidebar({
           key: "convert",
           icon: <RiPlayCircleLine />,
           label: "타일 변환",
-          disabled: converting,
+          disabled: converting || isTerrainInProgress,
         },
         {
           key: "download-terrain",

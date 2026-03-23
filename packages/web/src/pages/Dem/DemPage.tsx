@@ -28,11 +28,22 @@ type DemUploadApiResponse = {
 
 type DemListApiResponse = {
   dem_id: string;
+  job_id?: string | null;
   file_name: string;
   file_path: string;
   file_url: string;
   file_size?: number | null;
+  terrain_status?: string | null;
+  terrain_download_url?: string | null;
+  terrain_tileset_url?: string | null;
   created_at: string;
+};
+
+type DemConvertApiResponse = {
+  job_id: string;
+  dem_id: string;
+  status: string;
+  task_id: string;
 };
 
 function toViewerFileSource(file: File): DemViewerSource {
@@ -135,13 +146,16 @@ export function DemPage() {
       const data = await apiGet<DemListApiResponse[]>("/api/v1/dem/list?limit=100&offset=0");
       const nextItems: DemItem[] = (data || []).map((item) => ({
         dem_id: item.dem_id,
+        job_id: item.job_id ?? null,
         file_name: item.file_name,
         file_path: item.file_path,
         file_url: item.file_url,
         file_size: item.file_size,
+        terrain_download_url: item.terrain_download_url ?? null,
+        terrain_tileset_url: item.terrain_tileset_url ?? null,
         created_at: item.created_at,
-        status: "UPLOADED",
-        terrain_status: "UPLOADED",
+        status: item.terrain_status || "UPLOADED",
+        terrain_status: item.terrain_status || "UPLOADED",
       }));
       applyDemItems(nextItems);
     } catch (error) {
@@ -236,10 +250,13 @@ export function DemPage() {
 
       const nextItem: DemItem = {
         dem_id: demId,
+        job_id: null,
         file_name: response.file_name,
         file_path: response.file_path,
         file_url: response.file_url,
         file_size: response.file_size,
+        terrain_download_url: null,
+        terrain_tileset_url: null,
         created_at: response.created_at,
         status: "UPLOADED",
         terrain_status: "UPLOADED",
@@ -274,7 +291,28 @@ export function DemPage() {
       message.warning("다른 DEM 변환이 진행 중입니다.");
       return;
     }
-    message.info("Terrain 변환 API 연동 예정입니다.");
+    setConverting(true);
+    try {
+      const response = await apiPost<DemConvertApiResponse>(`/api/v1/dem/${item.dem_id}/convert`, {});
+      setDemItems((prev) =>
+        prev.map((current) =>
+          current.dem_id === item.dem_id
+            ? {
+                ...current,
+                job_id: response.job_id,
+                status: response.status,
+                terrain_status: response.status,
+              }
+            : current
+        )
+      );
+      message.success("Terrain 변환 작업이 시작되었습니다.");
+      await fetchDemList();
+    } catch (error) {
+      message.error(parseErrorMessage(error));
+    } finally {
+      setConverting(false);
+    }
   };
 
   const handleDownloadTerrainItem = async (item: DemItem) => {
