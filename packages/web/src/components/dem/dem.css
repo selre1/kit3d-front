@@ -195,7 +195,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   background: rgba(9, 13, 22, 0.92);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 3;
@@ -317,7 +317,8 @@
   flex-direction: column;
   gap: 8px;
   min-height: 0;
-  flex: 1 1 auto;
+  max-height: 100%;
+  flex: 1 1 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(96, 165, 250, 0.85) rgba(8, 12, 18, 0.95);
 }
@@ -484,6 +485,7 @@
 
 .dem-sidebar-tree {
   flex: 0 0 auto;
+  flex-shrink: 0;
   overflow: hidden;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding: 10px 14px 14px;
@@ -973,6 +975,16 @@
 
 .dem-item-dropdown .ant-dropdown-menu-item {
   color: #e8eefc;
+}
+
+.dem-item-dropdown .ant-dropdown-menu-item .ant-dropdown-menu-item-icon {
+  min-width: 15px;
+  font-size: 15px;
+}
+
+.dem-item-dropdown .ant-dropdown-menu-item .ant-dropdown-menu-item-icon svg {
+  width: 15px;
+  height: 15px;
 }
 
 .dem-item-dropdown .ant-dropdown-menu-item:hover {

@@ -153,7 +153,7 @@ export function DemSidebar({
         {
           key: "download-terrain",
           icon: <RiDownloadLine />,
-          label: "타일 다운로드",
+          label: "Terrain 다운로드",
           disabled: !isTerrainReady || downloading,
         },
         {
