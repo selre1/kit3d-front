@@ -40,8 +40,17 @@ type DemSidebarProps = {
 
 function statusMeta(status?: string | null) {
   const normalized = (status || "").toUpperCase();
+  if (normalized === "READY" || !normalized) {
+    return { color: "default", text: "READY" };
+  }
   if (normalized === "COMPLETED" || normalized === "DONE") {
     return { color: "success", text: "COMPLETED" };
+  }
+  if (normalized === "PENDING") {
+    return { color: "default", text: "PENDING" };
+  }
+  if (normalized === "ZIPPING") {
+    return { color: "processing", text: "ZIPPING" };
   }
   if (normalized === "RUNNING" || normalized === "PROCESSING") {
     return { color: "processing", text: "RUNNING" };
@@ -49,7 +58,7 @@ function statusMeta(status?: string | null) {
   if (normalized === "FAILED" || normalized === "ERROR") {
     return { color: "error", text: "FAILED" };
   }
-  return null;
+  return { color: "default", text: normalized };
 }
 
 function formatFileSize(bytes?: number | null) {
@@ -329,7 +338,9 @@ export function DemSidebar({
                       </Dropdown>
                     </div>
 
-                    <div className="dem-list-meta">{formatFileSize(item.file_size)}</div>
+                    <div className="dem-list-meta">
+                      {`${item.created_at} · ${formatFileSize(item.file_size)}`}
+                    </div>
                     {status ? <Tag color={status.color}>{status.text}</Tag> : null}
                   </div>
                 </div>
@@ -361,5 +372,3 @@ export function DemSidebar({
     </aside>
   );
 }
-
-

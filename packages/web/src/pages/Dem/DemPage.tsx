@@ -154,8 +154,8 @@ export function DemPage() {
         terrain_download_url: item.terrain_download_url ?? null,
         terrain_tileset_url: item.terrain_tileset_url ?? null,
         created_at: item.created_at,
-        status: item.terrain_status || "UPLOADED",
-        terrain_status: item.terrain_status || "UPLOADED",
+        status: item.terrain_status || "READY",
+        terrain_status: item.terrain_status || "READY",
       }));
       applyDemItems(nextItems);
     } catch (error) {
@@ -258,8 +258,8 @@ export function DemPage() {
         terrain_download_url: null,
         terrain_tileset_url: null,
         created_at: response.created_at,
-        status: "UPLOADED",
-        terrain_status: "UPLOADED",
+        status: "READY",
+        terrain_status: "READY",
       };
 
       setDemItems((prev) => upsertDemItem(prev, nextItem));
