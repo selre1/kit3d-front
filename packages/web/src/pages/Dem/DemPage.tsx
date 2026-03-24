@@ -1,6 +1,11 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ExclamationCircleOutlined } from "@ant-design/icons";
-import { Button, InputNumber, Modal, Space, Tooltip, message } from "antd";
+import {
+  EyeOutlined,
+  HighlightOutlined,
+  RocketOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
+import { Button, Flex, InputNumber, Modal, Radio, Tooltip, message } from "antd";
 
 import {
   DemProfilePanel,
@@ -45,6 +50,64 @@ type DemConvertApiResponse = {
   status: string;
   task_id: string;
 };
+
+type DemViewPresetKey = "original" | "sharp" | "optimized";
+
+type DemViewPreset = {
+  label: string;
+  maxGridSize: number;
+  heightScale: number;
+  verticalExaggeration: number;
+  elevationGamma: number;
+};
+
+const DEM_VIEW_PRESETS: Record<DemViewPresetKey, DemViewPreset> = {
+  original: {
+    label: "원본으로 보기",
+    maxGridSize: 0,
+    heightScale: 0.01,
+    verticalExaggeration: 1.0,
+    elevationGamma: 1.0,
+  },
+  sharp: {
+    label: "선명하게 보기",
+    maxGridSize: 1200,
+    heightScale: 0.02,
+    verticalExaggeration: 20.0,
+    elevationGamma: 1.7,
+  },
+  optimized: {
+    label: "최적화로 보기",
+    maxGridSize: 640,
+    heightScale: 0.02,
+    verticalExaggeration: 20.0,
+    elevationGamma: 1.35,
+  },
+};
+
+function isNear(left: number, right: number, epsilon = 0.000001) {
+  return Math.abs(left - right) <= epsilon;
+}
+
+function findMatchingPresetKey(
+  nextGridSize: number,
+  nextHeightScale: number,
+  nextVerticalExaggeration: number,
+  nextElevationGamma: number
+): DemViewPresetKey | null {
+  const entries = Object.entries(DEM_VIEW_PRESETS) as Array<[DemViewPresetKey, DemViewPreset]>;
+  for (const [key, preset] of entries) {
+    if (
+      nextGridSize === preset.maxGridSize &&
+      isNear(nextHeightScale, preset.heightScale) &&
+      isNear(nextVerticalExaggeration, preset.verticalExaggeration) &&
+      isNear(nextElevationGamma, preset.elevationGamma)
+    ) {
+      return key;
+    }
+  }
+  return null;
+}
 
 function toViewerFileSource(file: File): DemViewerSource {
   return {
@@ -99,7 +162,41 @@ function parseErrorMessage(error: unknown) {
   }
 }
 
+const VIEW_MODE_OPTIONS = [
+  {
+    value: "original",
+    className: "dem-settings-option",
+    label: (
+      <Flex gap={4} justify="center" align="center" vertical>
+        <EyeOutlined className="dem-settings-mode-icon" />
+        <span>원본</span>
+      </Flex>
+    ),
+  },
+  {
+    value: "sharp",
+    className: "dem-settings-option",
+    label: (
+      <Flex gap={4} justify="center" align="center" vertical>
+        <HighlightOutlined className="dem-settings-mode-icon" />
+        <span>선명</span>
+      </Flex>
+    ),
+  },
+  {
+    value: "optimized",
+    className: "dem-settings-option",
+    label: (
+      <Flex gap={4} justify="center" align="center" vertical>
+        <RocketOutlined className="dem-settings-mode-icon" />
+        <span>최적화</span>
+      </Flex>
+    ),
+  },
+];
+
 export function DemPage() {
+  const originalPreset = DEM_VIEW_PRESETS.optimized;
   const [demItems, setDemItems] = useState<DemItem[]>([]);
   const [viewerSources, setViewerSources] = useState<Record<string, DemViewerSource>>({});
   const viewerSourcesRef = useRef<Record<string, DemViewerSource>>({});
@@ -109,22 +206,33 @@ export function DemPage() {
   const [converting, setConverting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [autoRotate, setAutoRotate] = useState(true);
-  const [maxGridSize, setMaxGridSize] = useState(1024);
-  const [heightScale, setHeightScale] = useState(0.02);
-  const [verticalExaggeration, setVerticalExaggeration] = useState(30.0);
-  const [elevationGamma, setElevationGamma] = useState(1.5);
-  const [gridSettingOpen, setGridSettingOpen] = useState(false);
-  const [gridSettingValue, setGridSettingValue] = useState<number | null>(1024);
-  const [heightScaleValue, setHeightScaleValue] = useState<number | null>(0.02);
-  const [verticalExaggerationValue, setVerticalExaggerationValue] = useState<number | null>(
-    30.0
+  const [maxGridSize, setMaxGridSize] = useState(originalPreset.maxGridSize);
+  const [heightScale, setHeightScale] = useState(originalPreset.heightScale);
+  const [verticalExaggeration, setVerticalExaggeration] = useState(
+    originalPreset.verticalExaggeration
   );
-  const [elevationGammaValue, setElevationGammaValue] = useState<number | null>(1.5);
+  const [elevationGamma, setElevationGamma] = useState(originalPreset.elevationGamma);
+  const [viewPresetKey, setViewPresetKey] = useState<DemViewPresetKey>("original");
+  const [gridSettingOpen, setGridSettingOpen] = useState(false);
+  const [gridPresetDraftKey, setGridPresetDraftKey] = useState<DemViewPresetKey>("original");
+  const [gridSettingValue, setGridSettingValue] = useState<number | null>(
+    originalPreset.maxGridSize
+  );
+  const [heightScaleValue, setHeightScaleValue] = useState<number | null>(
+    originalPreset.heightScale
+  );
+  const [verticalExaggerationValue, setVerticalExaggerationValue] = useState<number | null>(
+    originalPreset.verticalExaggeration
+  );
+  const [elevationGammaValue, setElevationGammaValue] = useState<number | null>(
+    originalPreset.elevationGamma
+  );
   const [profiling, setProfiling] = useState(false);
   const [viewerMeta, setViewerMeta] = useState<string[] | null>(null);
   const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
   const profileHoverHandlerRef = useRef<(ratio: number | null) => void>(() => {});
   const [profileResetKey, setProfileResetKey] = useState(0);
+  const [viewResetKey, setViewResetKey] = useState(0);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const selectDem = useCallback((item: DemItem) => {
@@ -245,11 +353,17 @@ export function DemPage() {
       const formData = new FormData();
       formData.append("file", payload.file);
 
-      const response = await apiPost<DemUploadApiResponse>("/api/v1/dem/upload", formData);
+      const response ={dem_id: '23',
+        file_name: 'test',
+        file_path: '',
+        file_url: '',
+        file_size: 23,
+        created_at: new Date().toISOString(),
+      };// await apiPost<DemUploadApiResponse>("/api/v1/dem/upload", formData);
       const demId = (response.dem_id || "").trim() || `dem-${Date.now()}`;
 
       const nextItem: DemItem = {
-        dem_id: demId,
+        dem_id: demId || '23',
         job_id: null,
         file_name: response.file_name,
         file_path: response.file_path,
@@ -369,16 +483,30 @@ export function DemPage() {
     profileHoverHandlerRef.current(ratio);
   }, []);
 
+  const applyPresetDraft = useCallback((presetKey: DemViewPresetKey) => {
+    const preset = DEM_VIEW_PRESETS[presetKey];
+    setGridPresetDraftKey(presetKey);
+    setGridSettingValue(preset.maxGridSize);
+    setHeightScaleValue(preset.heightScale);
+    setVerticalExaggerationValue(preset.verticalExaggeration);
+    setElevationGammaValue(preset.elevationGamma);
+  }, []);
+
   const openGridSettingModal = useCallback(() => {
+    const detectedPreset =
+      findMatchingPresetKey(maxGridSize, heightScale, verticalExaggeration, elevationGamma) ??
+      viewPresetKey;
+
+    setGridPresetDraftKey(detectedPreset);
     setGridSettingValue(maxGridSize);
     setHeightScaleValue(heightScale);
     setVerticalExaggerationValue(verticalExaggeration);
     setElevationGammaValue(elevationGamma);
     setGridSettingOpen(true);
-  }, [maxGridSize, heightScale, verticalExaggeration, elevationGamma]);
+  }, [maxGridSize, heightScale, verticalExaggeration, elevationGamma, viewPresetKey]);
 
   const applyGridSetting = useCallback(() => {
-    const nextGridSize = Math.max(64, Math.floor(gridSettingValue ?? maxGridSize));
+    const nextGridSize = Math.max(0, Math.floor(gridSettingValue ?? maxGridSize));
     const nextHeightScale = Math.max(0.0001, Number(heightScaleValue ?? heightScale));
     const nextVerticalExaggeration = Math.max(
       0.01,
@@ -393,8 +521,16 @@ export function DemPage() {
     setHeightScale(nextHeightScale);
     setVerticalExaggeration(nextVerticalExaggeration);
     setElevationGamma(nextElevationGamma);
+    setViewPresetKey(
+      findMatchingPresetKey(
+        nextGridSize,
+        nextHeightScale,
+        nextVerticalExaggeration,
+        nextElevationGamma
+      ) ?? gridPresetDraftKey
+    );
     setGridSettingOpen(false);
-    message.success("Viewer settings applied.");
+    message.success("DEM 뷰어 설정이 적용되었습니다.");
   }, [
     gridSettingValue,
     maxGridSize,
@@ -404,6 +540,7 @@ export function DemPage() {
     verticalExaggeration,
     elevationGammaValue,
     elevationGamma,
+    gridPresetDraftKey,
   ]);
 
   return (
@@ -427,6 +564,7 @@ export function DemPage() {
           onConvertItem={handleConvertItem}
           onDownloadTerrainItem={handleDownloadTerrainItem}
           onDownloadTifItem={handleDownloadTifItem}
+          onResetView={() => setViewResetKey((prev) => prev + 1)}
           onOpenGridSettings={openGridSettingModal}
           onToggleCollapse={() => setSidebarCollapsed((prev) => !prev)}
         />
@@ -437,6 +575,7 @@ export function DemPage() {
               seedKey={selectedDem?.dem_id || null}
               source={selectedViewerSource}
               autoRotate={autoRotate}
+              viewResetKey={viewResetKey}
               maxGridSize={maxGridSize}
               heightScale={heightScale}
               verticalExaggeration={verticalExaggeration}
@@ -474,6 +613,8 @@ export function DemPage() {
       <Modal
         className="dem-settings-modal"
         title="DEM 뷰어 설정"
+        width={460}
+        centered
         open={gridSettingOpen}
         onCancel={() => setGridSettingOpen(false)}
         footer={[
@@ -485,30 +626,38 @@ export function DemPage() {
           </Button>,
         ]}
       >
-        <Space direction="vertical" size={12} className="dem-settings-panel">
+        <div className="dem-settings-presets">
+          <Radio.Group
+            value={gridPresetDraftKey}
+            onChange={(event) => applyPresetDraft(event.target.value as DemViewPresetKey)}
+            className="dem-settings-mode-group"
+            options={VIEW_MODE_OPTIONS}
+          />
+        </div>
+        <div className="dem-settings-panel">
           <div className="dem-setting-item">
             <div className="dem-setting-head">
-              <span className="dem-setting-name">DEM mesh resolution</span>
-              <Tooltip title="지형 메시의 가로/세로 샘플 최대 크기입니다. 값이 클수록 선명하지만 무거워집니다.">
-                <ExclamationCircleOutlined className="dem-setting-help" />
+              <span className="dem-setting-name">해상도</span>
+              <Tooltip title="지형 메시의 가로/세로 샘플 최대 크기입니다. 0이면 원본 해상도를 그대로 사용합니다.">
+                <InfoCircleOutlined className="dem-setting-help" />
               </Tooltip>
             </div>
             <InputNumber
-              min={64}
+              min={0}
               max={4096}
               step={64}
               value={gridSettingValue}
               onChange={(value) => setGridSettingValue(value)}
               className="dem-setting-input"
             />
-            <div className="dem-setting-desc">권장값: 512 ~ 1536</div>
+            <div className="dem-setting-desc">권장값: 0(원본) 또는 1024 ~ 4096</div>
           </div>
 
           <div className="dem-setting-item">
             <div className="dem-setting-head">
-              <span className="dem-setting-name">heightScale</span>
+              <span className="dem-setting-name">고도 배율</span>
               <Tooltip title="고도값을 실제 높이로 변환하는 기본 배율입니다.">
-                <ExclamationCircleOutlined className="dem-setting-help" />
+                <InfoCircleOutlined className="dem-setting-help" />
               </Tooltip>
             </div>
             <InputNumber
@@ -524,9 +673,9 @@ export function DemPage() {
 
           <div className="dem-setting-item">
             <div className="dem-setting-head">
-              <span className="dem-setting-name">verticalExaggeration</span>
+              <span className="dem-setting-name">고도 강조</span>
               <Tooltip title="세로 과장 배율입니다. 값이 커질수록 높낮이 대비가 강조됩니다.">
-                <ExclamationCircleOutlined className="dem-setting-help" />
+                <InfoCircleOutlined className="dem-setting-help" />
               </Tooltip>
             </div>
             <InputNumber
@@ -542,9 +691,9 @@ export function DemPage() {
 
           <div className="dem-setting-item">
             <div className="dem-setting-head">
-              <span className="dem-setting-name">elevationGamma</span>
+              <span className="dem-setting-name">고도 분포 곡률</span>
               <Tooltip title="고도 분포 곡률입니다. 1보다 크면 고지대가 더 강조됩니다.">
-                <ExclamationCircleOutlined className="dem-setting-help" />
+                <InfoCircleOutlined className="dem-setting-help" />
               </Tooltip>
             </div>
             <InputNumber
@@ -557,7 +706,7 @@ export function DemPage() {
             />
             <div className="dem-setting-desc">권장값: 1.0 ~ 2.0</div>
           </div>
-        </Space>
+        </div>
       </Modal>
     </div>
   );

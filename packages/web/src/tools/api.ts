@@ -12,8 +12,7 @@ async function request<T>(path: string, options?: RequestInitWithJson): Promise<
 
   const res = await fetch(`${path}`, init);
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+    throw new Error(`Request failed: ${res.status} ${res.statusText}`);
   }
   return res.json() as Promise<T>;
 }

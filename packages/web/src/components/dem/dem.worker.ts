@@ -1,5 +1,5 @@
 ﻿import { fromArrayBuffer } from "geotiff";
-import * as THREE from "three";
+import * as THREE from "three-legacy";
 
 type WorkerRequest = {
   arrayBuffer: ArrayBuffer;
@@ -31,6 +31,7 @@ type WorkerFailure = {
 };
 
 const MAX_GRID_SIZE = 2048;
+const MAX_VERTEX_COUNT = 1_500_000;
 
 function parseNoDataValue(raw: unknown): number | null {
   if (raw === null || raw === undefined) return null;
@@ -49,14 +50,33 @@ function sampleRaster(
   noDataValue: number | null,
   maxGridSize: number
 ) {
-  const safeMaxGridSize = Math.max(64, Math.floor(maxGridSize) || MAX_GRID_SIZE);
-  const stepX = Math.max(1, Math.ceil(width / safeMaxGridSize));
-  const stepY = Math.max(1, Math.ceil(height / safeMaxGridSize));
+  const requestedMaxGridSize = Number.isFinite(maxGridSize) ? Math.floor(maxGridSize) : 0;
+  const hasGridLimit = requestedMaxGridSize > 0;
+  const safeMaxGridSize = hasGridLimit
+    ? Math.max(64, requestedMaxGridSize)
+    : Math.max(width, height, MAX_GRID_SIZE);
+  let stepX = hasGridLimit ? Math.max(1, Math.ceil(width / safeMaxGridSize)) : 1;
+  let stepY = hasGridLimit ? Math.max(1, Math.ceil(height / safeMaxGridSize)) : 1;
 
-  const sampledWidth = Math.floor((width - 1) / stepX) + 1;
-  const sampledHeight = Math.floor((height - 1) / stepY) + 1;
+  let sampledWidth = Math.floor((width - 1) / stepX) + 1;
+  let sampledHeight = Math.floor((height - 1) / stepY) + 1;
+  let sampledVertexCount = sampledWidth * sampledHeight;
 
-  const sampled = new Float32Array(sampledWidth * sampledHeight);
+  if (sampledVertexCount > MAX_VERTEX_COUNT) {
+    const downscale = Math.sqrt(sampledVertexCount / MAX_VERTEX_COUNT);
+    const extraStep = Math.max(1, Math.ceil(downscale));
+    stepX *= extraStep;
+    stepY *= extraStep;
+    sampledWidth = Math.floor((width - 1) / stepX) + 1;
+    sampledHeight = Math.floor((height - 1) / stepY) + 1;
+    sampledVertexCount = sampledWidth * sampledHeight;
+  }
+
+  if (sampledVertexCount <= 0 || !Number.isFinite(sampledVertexCount)) {
+    throw new Error("Invalid DEM grid size.");
+  }
+
+  const sampled = new Float32Array(sampledVertexCount);
 
   const isNoData = (value: number) =>
     !Number.isFinite(value) || (noDataValue !== null && value === noDataValue);
@@ -209,7 +229,7 @@ function buildDemAttributes(
   const safeVerticalExaggeration =
     Number.isFinite(verticalExaggeration) && verticalExaggeration > 0
       ? verticalExaggeration
-      : 30.0;
+      : 20.0;
   const safeElevationGamma =
     Number.isFinite(elevationGamma) && elevationGamma > 0 ? elevationGamma : 1.5;
 
@@ -243,9 +263,9 @@ function buildDemAttributes(
 
 async function buildWorkerPayload(
   arrayBuffer: ArrayBuffer,
-  maxGridSize = MAX_GRID_SIZE,
+  maxGridSize = 0,
   heightScale = 0.02,
-  verticalExaggeration = 30.0,
+  verticalExaggeration = 20.0,
   elevationGamma = 1.5
 ): Promise<WorkerSuccess> {
   const rawTiff = await fromArrayBuffer(arrayBuffer);
@@ -253,7 +273,7 @@ async function buildWorkerPayload(
 
   const sourceWidth = tifImage.getWidth();
   const sourceHeight = tifImage.getHeight();
-  const dataResult = await tifImage.readRasters({ interleave: true, samples: [0] });
+  const dataResult = await tifImage.readRasters({ interleave: true });
   const raster = Array.isArray(dataResult)
     ? (dataResult[0] as ArrayLike<number>)
     : (dataResult as ArrayLike<number>);
@@ -302,9 +322,9 @@ workerScope.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   try {
     const payload = await buildWorkerPayload(
       event.data.arrayBuffer,
-      event.data.maxGridSize ?? MAX_GRID_SIZE,
+      event.data.maxGridSize ?? 0,
       event.data.heightScale ?? 0.02,
-      event.data.verticalExaggeration ?? 30.0,
+      event.data.verticalExaggeration ?? 20.0,
       event.data.elevationGamma ?? 1.5
     );
     workerScope.postMessage(payload, [payload.elevations, payload.zValues, payload.colors]);

@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState, useCallback, type MutableRefObject } from "react";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import * as THREE from "three-legacy";
+import { OrbitControls } from "three-legacy/examples/jsm/controls/OrbitControls.js";
 
 import {
   buildLineProfile,
@@ -14,6 +14,7 @@ type DemViewportProps = {
   seedKey?: string | null;
   source?: DemViewerSource | null;
   autoRotate?: boolean;
+  viewResetKey?: number;
   maxGridSize?: number;
   heightScale?: number;
   verticalExaggeration?: number;
@@ -62,11 +63,77 @@ type ProfileHintState = {
 const PROFILE_LIFT = 1.4;
 const CLICK_MOVE_THRESHOLD = 6;
 const HINT_MIN_MOVE_PX = 2;
-const MAX_RENDER_FPS = 45;
-const MAX_PIXEL_RATIO = 1.5;
+
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(1000, 1000, 1000);
+const DEFAULT_CAMERA_TARGET = new THREE.Vector3(0, 0, 0);
+const MIN_DISTANCE_ABS = 5;
+const MIN_DISTANCE_FACTOR = 0.02;
+const MAX_DISTANCE_FACTOR = 18;
+const FIT_DISTANCE_FACTOR = 2.6;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function tuneControls(controls: OrbitControls) {
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.rotateSpeed = 0.75;
+  controls.zoomSpeed = 1.2;
+  controls.panSpeed = 1.05;
+  controls.screenSpacePanning = true;
+}
+
+function enforceCameraDistance(
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControls,
+  requestRender: () => void
+) {
+  const toCamera = camera.position.clone().sub(controls.target);
+  const distance = toCamera.length();
+  if (!Number.isFinite(distance) || distance <= 0) return;
+
+  let nextDistance = distance;
+  if (distance < controls.minDistance) nextDistance = controls.minDistance;
+  if (distance > controls.maxDistance) nextDistance = controls.maxDistance;
+  if (nextDistance === distance) return;
+
+  toCamera.setLength(nextDistance);
+  camera.position.copy(controls.target).add(toCamera);
+  requestRender();
+}
+
+function fitCameraToTerrain(
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControls,
+  terrain: THREE.Object3D,
+  requestRender: () => void
+) {
+  const box = new THREE.Box3().setFromObject(terrain);
+  if (box.isEmpty()) {
+    return;
+  }
+
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const radius = Math.max(sphere.radius, 1);
+  controls.minDistance = Math.max(MIN_DISTANCE_ABS, radius * MIN_DISTANCE_FACTOR);
+  controls.maxDistance = Math.max(1500, radius * MAX_DISTANCE_FACTOR);
+
+  const direction = camera.position.clone().sub(controls.target);
+  if (direction.lengthSq() < 0.0001) {
+    direction.copy(DEFAULT_CAMERA_POSITION).normalize();
+  } else {
+    direction.normalize();
+  }
+
+  const fitDistance = Math.max(radius * FIT_DISTANCE_FACTOR, controls.minDistance * 1.5);
+  controls.target.copy(sphere.center);
+  camera.position.copy(sphere.center).add(direction.multiplyScalar(fitDistance));
+  camera.near = Math.max(0.1, radius / 5000);
+  camera.far = Math.max(10000, radius * 80);
+  camera.updateProjectionMatrix();
+  controls.update();
+  requestRender();
 }
 
 function disposeMesh(mesh: THREE.Mesh | null) {
@@ -108,6 +175,11 @@ function createDemMesh(
   zValues: Float32Array,
   colors: Float32Array
 ): THREE.Mesh {
+  const vertexCount = width * height;
+  if (!Number.isFinite(vertexCount) || vertexCount <= 0) {
+    throw new Error("Invalid DEM grid size.");
+  }
+
   const geometry = new THREE.PlaneGeometry(
     width,
     height,
@@ -516,9 +588,10 @@ export function DemViewport({
   seedKey,
   source,
   autoRotate = true,
-  maxGridSize = 1024,
+  viewResetKey = 0,
+  maxGridSize = 0,
   heightScale = 0.02,
-  verticalExaggeration = 30.0,
+  verticalExaggeration = 20.0,
   elevationGamma = 1.5,
   profileEnabled = false,
   profileResetKey = 0,
@@ -638,16 +711,16 @@ export function DemViewport({
       0.1,
       10000
     );
-    camera.position.set(1000, 1000, 1000);
-    camera.lookAt(scene.position);
+    camera.position.copy(DEFAULT_CAMERA_POSITION);
+    camera.lookAt(DEFAULT_CAMERA_TARGET);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({
-      antialias: false,
+      antialias: true,
       powerPreference: "high-performance",
     });
     renderer.setClearColor(0xd3d3d3);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO));
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
     renderer.setSize(container.clientWidth, container.clientHeight);
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
@@ -655,20 +728,34 @@ export function DemViewport({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enabled = true;
     controls.maxDistance = 1500;
-    controls.minDistance = 0;
+    controls.minDistance = MIN_DISTANCE_ABS;
     controls.autoRotate = autoRotate;
+    controls.target.copy(DEFAULT_CAMERA_TARGET);
+    tuneControls(controls);
+    controls.update();
     controlsRef.current = controls;
     const handleControlsChange = () => {
       requestRender();
     };
     controls.addEventListener("change", handleControlsChange);
 
+    const handleDoubleClick = () => {
+      const terrain = terrainRef.current;
+      if (terrain) {
+        fitCameraToTerrain(camera, controls, terrain, requestRender);
+        return;
+      }
+      controls.target.copy(DEFAULT_CAMERA_TARGET);
+      camera.position.copy(DEFAULT_CAMERA_POSITION);
+      camera.lookAt(DEFAULT_CAMERA_TARGET);
+      controls.update();
+      requestRender();
+    };
+    renderer.domElement.addEventListener("dblclick", handleDoubleClick);
+
     const light = new THREE.DirectionalLight(0xffffff, 1);
     light.position.set(500, 1000, 250);
     scene.add(light);
-
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-    scene.add(ambientLight);
 
     const gridHelper = new THREE.GridHelper(1000, 40);
     scene.add(gridHelper);
@@ -687,30 +774,9 @@ export function DemViewport({
     });
     resizeObserver.observe(container);
 
-    const frameInterval = 1000 / MAX_RENDER_FPS;
-    let lastRenderTime = 0;
-
-    const renderLoop = (time: number) => {
-      if (document.hidden) {
-        frameRef.current = window.requestAnimationFrame(renderLoop);
-        return;
-      }
-
-      if (time - lastRenderTime < frameInterval) {
-        frameRef.current = window.requestAnimationFrame(renderLoop);
-        return;
-      }
-      lastRenderTime = time;
-
-      const shouldRender = controls.autoRotate || needsRenderRef.current;
-      if (!shouldRender) {
-        frameRef.current = window.requestAnimationFrame(renderLoop);
-        return;
-      }
-
-      if (controls.autoRotate || controls.enableDamping) {
-        controls.update();
-      }
+    const renderLoop = (_time: number) => {
+      controls.update();
+      enforceCameraDistance(camera, controls, requestRender);
       updateViewerProfileLabels();
       renderer.render(scene, camera);
       needsRenderRef.current = false;
@@ -742,6 +808,7 @@ export function DemViewport({
         profileHoverMarkerRef
       );
 
+      renderer.domElement.removeEventListener("dblclick", handleDoubleClick);
       controls.removeEventListener("change", handleControlsChange);
       controls.dispose();
       renderer.dispose();
@@ -762,6 +829,29 @@ export function DemViewport({
     controlsRef.current.autoRotate = autoRotate;
     requestRender();
   }, [autoRotate, requestRender]);
+
+  useEffect(() => {
+    const camera = cameraRef.current;
+    const controls = controlsRef.current;
+    if (!camera || !controls) return;
+
+    const terrain = terrainRef.current;
+    if (terrain) {
+      fitCameraToTerrain(camera, controls, terrain, requestRender);
+      return;
+    }
+
+    controls.minDistance = MIN_DISTANCE_ABS;
+    controls.maxDistance = 1500;
+    controls.target.copy(DEFAULT_CAMERA_TARGET);
+    camera.position.copy(DEFAULT_CAMERA_POSITION);
+    camera.lookAt(DEFAULT_CAMERA_TARGET);
+    camera.near = 0.1;
+    camera.far = 10000;
+    camera.updateProjectionMatrix();
+    controls.update();
+    requestRender();
+  }, [viewResetKey, requestRender]);
 
   useEffect(() => {
     profileEnabledRef.current = profileEnabled;
@@ -806,6 +896,19 @@ export function DemViewport({
     requestRender();
 
     if (!source) {
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      if (camera && controls) {
+        controls.minDistance = MIN_DISTANCE_ABS;
+        controls.maxDistance = 1500;
+        controls.target.copy(DEFAULT_CAMERA_TARGET);
+        camera.position.copy(DEFAULT_CAMERA_POSITION);
+        camera.lookAt(DEFAULT_CAMERA_TARGET);
+        camera.near = 0.1;
+        camera.far = 10000;
+        camera.updateProjectionMatrix();
+        controls.update();
+      }
       setLoading(false);
       setViewerError(null);
       setElevationRange(null);
@@ -840,6 +943,11 @@ export function DemViewport({
         }
         terrainRef.current = terrain;
         scene.add(terrain);
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+        if (camera && controls) {
+          fitCameraToTerrain(camera, controls, terrain, requestRender);
+        }
         gridDataRef.current = grid;
         setElevationRange({ min: minElevation, max: maxElevation });
         onMetaChange?.(sourceMeta);
@@ -853,7 +961,11 @@ export function DemViewport({
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        setViewerError("DEM 로드에 실패했습니다.");
+        const message =
+          error instanceof Error && error.message
+            ? error.message
+            : "DEM 로드에 실패했습니다.";
+        setViewerError(message);
       })
       .finally(() => {
         if (cancelled) return;

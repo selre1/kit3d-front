@@ -3,6 +3,7 @@ import type { KeyboardEvent } from "react";
 import {
   RiDownloadLine,
   RiFileLine,
+  RiFocus3Line,
   RiMoreLine,
   RiPlayCircleLine,
   RiRefreshLine,
@@ -34,6 +35,7 @@ type DemSidebarProps = {
   onConvertItem: (item: DemItem) => void;
   onDownloadTerrainItem: (item: DemItem) => void;
   onDownloadTifItem: (item: DemItem) => void;
+  onResetView: () => void;
   onOpenGridSettings: () => void;
   onToggleCollapse: () => void;
 };
@@ -115,6 +117,7 @@ export function DemSidebar({
   onConvertItem,
   onDownloadTerrainItem,
   onDownloadTifItem,
+  onResetView,
   onOpenGridSettings,
   onToggleCollapse,
 }: DemSidebarProps) {
@@ -235,6 +238,20 @@ export function DemSidebar({
               loading={refreshing}
               onClick={onRefresh}
               aria-label="새로고침"
+            />
+          </Tooltip>
+          <Tooltip
+            title="시점 초기화"
+            placement="top"
+            overlayClassName="dem-action-tooltip"
+            getPopupContainer={getTooltipContainer}
+          >
+            <Button
+              size="small"
+              type="text"
+              icon={<RiFocus3Line />}
+              onClick={onResetView}
+              aria-label="시점 초기화"
             />
           </Tooltip>
           <Tooltip
