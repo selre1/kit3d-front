@@ -72,6 +72,7 @@ type CameraFocusAnimation = {
 
 const PROFILE_LIFT = 1.4;
 const PROFILE_FOCUS_DURATION_MS = 420;
+const PROFILE_FOCUS_ZOOM_FACTOR = 0.7;
 const CLICK_MOVE_THRESHOLD = 6;
 const HINT_MIN_MOVE_PX = 2;
 
@@ -1187,10 +1188,11 @@ export function DemViewport({
       );
       const currentOffset = currentPosition.clone().sub(currentTarget);
       const fallbackDistance = Math.max(controls.minDistance * 1.8, 120);
+      const currentDistance = currentOffset.length() || fallbackDistance;
       const nextDistance = clamp(
-        currentOffset.length() || fallbackDistance,
-        Math.max(controls.minDistance * 1.2, MIN_DISTANCE_ABS * 2),
-        Math.max(controls.minDistance * 2, controls.maxDistance * 0.35)
+        currentDistance * PROFILE_FOCUS_ZOOM_FACTOR,
+        Math.max(controls.minDistance * 1.15, MIN_DISTANCE_ABS * 2),
+        Math.max(controls.minDistance * 1.8, controls.maxDistance * 0.22)
       );
 
       if (currentOffset.lengthSq() < 0.0001) {
