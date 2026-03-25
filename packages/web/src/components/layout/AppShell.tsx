@@ -3,7 +3,8 @@ import {
   RiHome5Line,
   RiSettings3Line,
 } from "react-icons/ri";
-import { BsBadge3D } from "react-icons/bs";
+import {ViewInArOutlined} from "@mui/icons-material";
+
 import { MdOutlineTerrain } from "react-icons/md";
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -49,7 +50,7 @@ export function AppShell({
           inlineCollapsed={collapsed}
           items={[
             { key: "home", label: "홈", icon: <RiHome5Line /> },
-            { key: "projects", label: "3D 모델", icon: <BsBadge3D /> },
+            { key: "projects", label: "3D 모델", icon: <ViewInArOutlined /> },
             { key: "dem", label: "지형 모델", icon: <MdOutlineTerrain /> },
             { key: "settings", label: "설정", icon: <RiSettings3Line /> },
           ]}

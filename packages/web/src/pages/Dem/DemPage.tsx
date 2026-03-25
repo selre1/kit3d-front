@@ -353,17 +353,11 @@ export function DemPage() {
       const formData = new FormData();
       formData.append("file", payload.file);
 
-      const response ={dem_id: '23',
-        file_name: 'test',
-        file_path: '',
-        file_url: '',
-        file_size: 23,
-        created_at: new Date().toISOString(),
-      };// await apiPost<DemUploadApiResponse>("/api/v1/dem/upload", formData);
+      const response = await apiPost<DemUploadApiResponse>("/api/v1/dem/upload", formData);
       const demId = (response.dem_id || "").trim() || `dem-${Date.now()}`;
 
       const nextItem: DemItem = {
-        dem_id: demId || '23',
+        dem_id: demId,
         job_id: null,
         file_name: response.file_name,
         file_path: response.file_path,
