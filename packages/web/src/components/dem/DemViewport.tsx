@@ -1466,7 +1466,7 @@ export function DemViewport({
       <div ref={distanceLabelRef} className="dem-profile-anchor dem-profile-anchor-distance" />
       {elevationRange ? (
         <div className="dem-legend" aria-label="elevation-legend">
-          <div className="dem-legend-title">Elevation (m)</div>
+          <div className="dem-legend-title">고도 범례 (m)</div>
           <div className="dem-legend-body">
             <div className="dem-legend-max">{formatElevation(elevationRange.max)}</div>
             <div className="dem-legend-scale" />
