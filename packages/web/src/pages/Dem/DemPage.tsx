@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   EyeOutlined,
   HighlightOutlined,
@@ -231,6 +231,7 @@ export function DemPage() {
   const [viewerMeta, setViewerMeta] = useState<string[] | null>(null);
   const [profileResult, setProfileResult] = useState<DemProfileResult | null>(null);
   const profileHoverHandlerRef = useRef<(ratio: number | null) => void>(() => {});
+  const profileFocusHandlerRef = useRef<(ratio: number | null) => void>(() => {});
   const [profileResetKey, setProfileResetKey] = useState(0);
   const [viewResetKey, setViewResetKey] = useState(0);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -473,8 +474,19 @@ export function DemPage() {
     []
   );
 
+  const handleProfileFocusHandlerReady = useCallback(
+    (handler: (ratio: number | null) => void) => {
+      profileFocusHandlerRef.current = handler;
+    },
+    []
+  );
+
   const handleProfileHoverRatioChange = useCallback((ratio: number | null) => {
     profileHoverHandlerRef.current(ratio);
+  }, []);
+
+  const handleProfileFocusRatioChange = useCallback((ratio: number | null) => {
+    profileFocusHandlerRef.current(ratio);
   }, []);
 
   const applyPresetDraft = useCallback((presetKey: DemViewPresetKey) => {
@@ -579,6 +591,7 @@ export function DemPage() {
               onMetaChange={handleMetaChange}
               onProfileChange={setProfileResult}
               onProfileHoverHandlerReady={handleProfileHoverHandlerReady}
+              onProfileFocusHandlerReady={handleProfileFocusHandlerReady}
             />
           </div>
 
@@ -593,6 +606,7 @@ export function DemPage() {
                 }}
                 onClear={resetProfile}
                 onHoverRatioChange={handleProfileHoverRatioChange}
+                onFocusRatioChange={handleProfileFocusRatioChange}
               />
             </div>
           ) : null}

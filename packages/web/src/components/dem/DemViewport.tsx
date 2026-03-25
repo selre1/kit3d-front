@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState, useCallback, type MutableRefObject } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, type MutableRefObject } from "react";
 import * as THREE from "three-legacy";
 import { OrbitControls } from "three-legacy/examples/jsm/controls/OrbitControls.js";
 
@@ -24,6 +24,7 @@ type DemViewportProps = {
   onMetaChange?: (meta: string[] | null) => void;
   onProfileChange?: (profile: DemProfileResult | null) => void;
   onProfileHoverHandlerReady?: (handler: (ratio: number | null) => void) => void;
+  onProfileFocusHandlerReady?: (handler: (ratio: number | null) => void) => void;
 };
 
 type DemWorkerSuccess = {
@@ -60,7 +61,17 @@ type ProfileHintState = {
   text: string;
 };
 
+type CameraFocusAnimation = {
+  startTime: number;
+  duration: number;
+  fromPosition: THREE.Vector3;
+  toPosition: THREE.Vector3;
+  fromTarget: THREE.Vector3;
+  toTarget: THREE.Vector3;
+};
+
 const PROFILE_LIFT = 1.4;
+const PROFILE_FOCUS_DURATION_MS = 420;
 const CLICK_MOVE_THRESHOLD = 6;
 const HINT_MIN_MOVE_PX = 2;
 
@@ -82,6 +93,52 @@ function tuneControls(controls: OrbitControls) {
   controls.zoomSpeed = 1.2;
   controls.panSpeed = 1.05;
   controls.screenSpacePanning = true;
+}
+
+function easeInOutCubic(value: number) {
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 - Math.pow(-2 * value + 2, 3) / 2;
+}
+
+function updateCameraFocusAnimation(
+  animationRef: MutableRefObject<CameraFocusAnimation | null>,
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControls,
+  now: number,
+  autoRotateEnabled: boolean,
+  requestRender: () => void
+) {
+  const animation = animationRef.current;
+  if (!animation) {
+    controls.autoRotate = autoRotateEnabled;
+    return;
+  }
+
+  const progress = animation.duration <= 0
+    ? 1
+    : clamp((now - animation.startTime) / animation.duration, 0, 1);
+  const eased = easeInOutCubic(progress);
+
+  camera.position.set(
+    animation.fromPosition.x + (animation.toPosition.x - animation.fromPosition.x) * eased,
+    animation.fromPosition.y + (animation.toPosition.y - animation.fromPosition.y) * eased,
+    animation.fromPosition.z + (animation.toPosition.z - animation.fromPosition.z) * eased,
+  );
+  controls.target.set(
+    animation.fromTarget.x + (animation.toTarget.x - animation.fromTarget.x) * eased,
+    animation.fromTarget.y + (animation.toTarget.y - animation.fromTarget.y) * eased,
+    animation.fromTarget.z + (animation.toTarget.z - animation.fromTarget.z) * eased,
+  );
+  controls.autoRotate = false;
+  requestRender();
+
+  if (progress >= 1) {
+    animationRef.current = null;
+    controls.autoRotate = autoRotateEnabled;
+  }
 }
 
 function enforceCameraDistance(
@@ -598,6 +655,7 @@ export function DemViewport({
   onMetaChange,
   onProfileChange,
   onProfileHoverHandlerReady,
+  onProfileFocusHandlerReady,
 }: DemViewportProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -606,6 +664,7 @@ export function DemViewport({
   const controlsRef = useRef<OrbitControls | null>(null);
   const terrainRef = useRef<THREE.Mesh | null>(null);
   const frameRef = useRef<number>(0);
+  const autoRotateRef = useRef<boolean>(autoRotate);
   const needsRenderRef = useRef<boolean>(true);
   const gridDataRef = useRef<DemGridData | null>(null);
   const profileLineRef = useRef<THREE.Line | null>(null);
@@ -613,6 +672,7 @@ export function DemViewport({
   const profileStartMarkerRef = useRef<THREE.Mesh | null>(null);
   const profileEndMarkerRef = useRef<THREE.Mesh | null>(null);
   const profileHoverMarkerRef = useRef<THREE.Mesh | null>(null);
+  const profileFocusAnimationRef = useRef<CameraFocusAnimation | null>(null);
   const profileStartRef = useRef<DemProfilePick | null>(null);
   const profileEndRef = useRef<DemProfilePick | null>(null);
   const pointerDownRef = useRef<{ x: number; y: number; moved: boolean } | null>(null);
@@ -774,7 +834,15 @@ export function DemViewport({
     });
     resizeObserver.observe(container);
 
-    const renderLoop = (_time: number) => {
+    const renderLoop = (time: number) => {
+      updateCameraFocusAnimation(
+        profileFocusAnimationRef,
+        camera,
+        controls,
+        time,
+        autoRotateRef.current,
+        requestRender
+      );
       controls.update();
       enforceCameraDistance(camera, controls, requestRender);
       updateViewerProfileLabels();
@@ -821,12 +889,16 @@ export function DemViewport({
       rendererRef.current = null;
       cameraRef.current = null;
       controlsRef.current = null;
+      profileFocusAnimationRef.current = null;
     };
   }, []);
 
   useEffect(() => {
+    autoRotateRef.current = autoRotate;
     if (!controlsRef.current) return;
-    controlsRef.current.autoRotate = autoRotate;
+    if (!profileFocusAnimationRef.current) {
+      controlsRef.current.autoRotate = autoRotate;
+    }
     requestRender();
   }, [autoRotate, requestRender]);
 
@@ -1066,6 +1138,84 @@ export function DemViewport({
       onProfileHoverHandlerReady(() => {});
     };
   }, [onProfileHoverHandlerReady, requestRender]);
+
+  useEffect(() => {
+    if (!onProfileFocusHandlerReady) return;
+
+    const handler = (ratio: number | null) => {
+      const camera = cameraRef.current;
+      const controls = controlsRef.current;
+      const terrain = terrainRef.current;
+      const grid = gridDataRef.current;
+      const start = profileStartRef.current;
+      const end = profileEndRef.current;
+
+      if (
+        ratio === null ||
+        !camera ||
+        !controls ||
+        !terrain ||
+        !grid ||
+        !start ||
+        !end ||
+        !Number.isFinite(ratio)
+      ) {
+        return;
+      }
+
+      const clampedRatio = clamp(ratio, 0, 1);
+      const localPoint: DemLocalPoint = {
+        x: start.local.x + (end.local.x - start.local.x) * clampedRatio,
+        y: start.local.y + (end.local.y - start.local.y) * clampedRatio,
+      };
+
+      const targetLocal = new THREE.Vector3(
+        localPoint.x,
+        localPoint.y,
+        sampleSurfaceZ(localPoint, grid) + PROFILE_LIFT + 0.8
+      );
+      const nextTarget = terrain.localToWorld(targetLocal);
+      const currentPosition = new THREE.Vector3(
+        camera.position.x,
+        camera.position.y,
+        camera.position.z,
+      );
+      const currentTarget = new THREE.Vector3(
+        controls.target.x,
+        controls.target.y,
+        controls.target.z,
+      );
+      const currentOffset = currentPosition.clone().sub(currentTarget);
+      const fallbackDistance = Math.max(controls.minDistance * 1.8, 120);
+      const nextDistance = clamp(
+        currentOffset.length() || fallbackDistance,
+        Math.max(controls.minDistance * 1.2, MIN_DISTANCE_ABS * 2),
+        Math.max(controls.minDistance * 2, controls.maxDistance * 0.35)
+      );
+
+      if (currentOffset.lengthSq() < 0.0001) {
+        currentOffset.copy(DEFAULT_CAMERA_POSITION).normalize().multiplyScalar(nextDistance);
+      } else {
+        currentOffset.setLength(nextDistance);
+      }
+
+      profileFocusAnimationRef.current = {
+        startTime: performance.now(),
+        duration: PROFILE_FOCUS_DURATION_MS,
+        fromPosition: currentPosition,
+        toPosition: nextTarget.clone().add(currentOffset),
+        fromTarget: currentTarget,
+        toTarget: nextTarget.clone(),
+      };
+      requestRender();
+    };
+
+    onProfileFocusHandlerReady(handler);
+
+    return () => {
+      onProfileFocusHandlerReady(() => {});
+    };
+  }, [onProfileFocusHandlerReady, requestRender]);
 
   useEffect(() => {
     const renderer = rendererRef.current;

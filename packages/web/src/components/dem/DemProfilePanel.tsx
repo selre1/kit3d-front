@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Card, Empty, Space, Tag, Typography } from "antd";
 import { RiCloseLine, RiDeleteBinLine} from "react-icons/ri";
 import { TbChartLine } from "react-icons/tb";
@@ -12,6 +12,7 @@ type DemProfilePanelProps = {
   onClear: () => void;
   onClose?: () => void;
   onHoverRatioChange?: (ratio: number | null) => void;
+  onFocusRatioChange?: (ratio: number | null) => void;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -78,6 +79,7 @@ export function DemProfilePanel({
   onClear,
   onClose,
   onHoverRatioChange,
+  onFocusRatioChange,
 }: DemProfilePanelProps) {
   const chartWidth = 360;
   const chartHeight = 180;
@@ -239,6 +241,21 @@ export function DemProfilePanel({
     setHoverDotPos(null);
   }, [applyHoverSampleIndex]);
 
+  const handleChartClick = useCallback(
+    (clientX: number) => {
+      if (!profile || !onFocusRatioChange) return;
+
+      const nextIndex = resolveSampleIndexByClientX(clientX);
+      if (nextIndex === null) return;
+
+      const sample = profile.samples[nextIndex];
+      if (!sample) return;
+
+      onFocusRatioChange(sample.ratio);
+    },
+    [onFocusRatioChange, profile, resolveSampleIndexByClientX]
+  );
+
   useEffect(() => {
     if (!enabled || !profile) {
       applyHoverSampleIndex(null);
@@ -330,6 +347,7 @@ export function DemProfilePanel({
                 aria-label="dem-elevation-profile"
                 onPointerMove={(event) => handleChartPointerMove(event.clientX)}
                 onPointerLeave={handleChartPointerLeave}
+                onClick={(event) => handleChartClick(event.clientX)}
               >
                 <defs>
                   <linearGradient id="demProfileAreaGradient" x1="0" y1="0" x2="0" y2="1">
