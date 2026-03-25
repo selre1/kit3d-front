@@ -91,7 +91,9 @@ function AppRoutes() {
         )
       }
       headerTitle={<Breadcrumb className="header-breadcrumb" items={breadcrumbItems} />}
-      contentClassName={activeMenu === "dem" ? "page page-dem" : "page"}
+      contentClassName={
+        activeMenu === "dem" ? "page page-dem" : activeMenu === "home" ? "page page-home" : "page"
+      }
     >
       <Suspense fallback={<div className="page" />}>
         <Routes>
