@@ -109,7 +109,7 @@ export function HomaPage() {
               whiteSpace: { xs: "normal", md: "nowrap" },
             }}
           >
-            KIT3D Integrated Workspace
+            3D 지리공간 통합 운영 플랫폼
           </Typography>
 
           <Typography
@@ -125,7 +125,7 @@ export function HomaPage() {
               whiteSpace: "nowrap",
             }}
           >
-            IFC Import, 3D Tiles, DEM/Terrain 작업을 하나의 화면에서 운영합니다.
+            디지털 트윈을 위한 작업관리 및 지도 서비스 운영을 지원합니다.
           </Typography>
 
           <Stack
