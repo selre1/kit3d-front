@@ -60,7 +60,7 @@ const FEATURE_GROUPS: FeatureGroup[] = [
     title: "지형 관리 및 Terrain 변환",
     tags: ["TIF", "Terrain"],
     points: [
-      "DEM(TIF) 업로드/다운로드 기반 지형 관리",
+      "DEM(TIF) 업로드/다운로드 및 메타데이터 분석 ",
       "DEM 3D 전용 뷰어와 지형 고도 프로파일 분석",
       "Terrain 변환 작업 상태 관리 및 결과물 다운로드",
       "3D Terrain 스트리밍 서비스 지원",
