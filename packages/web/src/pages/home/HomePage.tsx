@@ -145,7 +145,7 @@ export function HomaPage() {
                 background: "linear-gradient(180deg, #1c92ff, #1274ff)",
               }}
             >
-              3D 프로젝트 바로가기
+              3D 모델 작업 바로가기
             </Button>
             <Button
               variant="outlined"
