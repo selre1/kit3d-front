@@ -10,9 +10,8 @@ import {
   Modal,
   Pagination,
   Spin,
-  Tag,
 } from "antd";
-import { CheckCircleOutlined, FileMarkdownOutlined } from "@ant-design/icons";
+import { RiFileTextLine } from "react-icons/ri";
 import { useNavigate } from "react-router-dom";
 
 import { apiGet, apiPost } from "../../tools/api";
@@ -39,7 +38,7 @@ function mapProjectToCard(project: Project): ProjectCard {
     name: project.name,
     description: project.description || "",
     updated: project.created_at ? `${project.created_at}` : "",
-    owner: "관리자",
+    owner: "프로젝트 소유자",
     models: project.models_count || 0,
     empty: (project.models_count || 0) === 0,
   };
@@ -171,11 +170,7 @@ export function ProjectsPage() {
     }
 
     if (error) {
-      return (
-        <div style={{ padding: 24, color: "#ff8a8a" }}>
-          프로젝트를 불러오지 못했습니다: {error}
-        </div>
-      );
+      return <div style={{ padding: 24, color: "#ff8a8a" }}>프로젝트를 불러오지 못했습니다: {error}</div>;
     }
 
     if (!projects.length && !isSearching) {
@@ -207,14 +202,12 @@ export function ProjectsPage() {
               <div className="project-meta">
                 <div>
                   <div className="project-title">{project.name}</div>
-                  <div className="project-owner">
-                    {project.description || "설명 없음"}
-                  </div>
+                  <div className="project-owner">{project.description || "설명 없음"}</div>
                   <div className="project-owner">
                     {project.owner} {project.updated ? `/ ${project.updated}` : ""}
                   </div>
                 </div>
-                <Avatar size="small">{project.owner}</Avatar>
+                <Avatar size="small">{project.owner[0] ?? "P"}</Avatar>
               </div>
               <div className="project-preview">
                 {project.empty ? (
@@ -222,24 +215,8 @@ export function ProjectsPage() {
                 ) : (
                   <div style={{ width: "100%", textAlign: "center" }}>
                     <Badge count={project.models} showZero>
-                      <Avatar shape="square" size="large" icon={<FileMarkdownOutlined />} />
+                      <Avatar shape="square" size="large" icon={<RiFileTextLine />} />
                     </Badge>
-                    <div
-                      style={{
-                        marginTop: 15,
-                        display: "flex",
-                        gap: 6,
-                        justifyContent: "center",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <Tag color="success" icon={<CheckCircleOutlined />} variant="solid">
-                        IFC
-                      </Tag>
-                      <Tag color="geekblue" variant="solid">
-                        3DTiles
-                      </Tag>
-                    </div>
                   </div>
                 )}
               </div>
@@ -273,8 +250,8 @@ export function ProjectsPage() {
 
   return (
     <>
-      <div className="page-title">프로젝트 생성하기</div>
-      <div className="page-subtitle">모델을 관리하기 위한 공간</div>
+      <div className="page-title">프로젝트 목록</div>
+      <div className="page-subtitle">프로젝트를 선택하거나 새 프로젝트를 생성하세요.</div>
 
       <div className="toolbar">
         <div className="toolbar-left">
@@ -285,24 +262,6 @@ export function ProjectsPage() {
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
           />
-          {/* <Select
-            defaultValue="role"
-            style={{ width: 160 }}
-            options={[
-              { value: "role", label: "역할 선택" },
-              { value: "owner", label: "소유자" },
-              { value: "member", label: "멤버" },
-            ]}
-          />
-          <Select
-            defaultValue="source"
-            style={{ width: 160 }}
-            options={[
-              { value: "source", label: "전체 소스" },
-              { value: "upload", label: "업로드" },
-              { value: "sync", label: "동기화" },
-            ]}
-          /> */}
         </div>
         <div className="toolbar-right">
           <Button type="primary" onClick={() => setCreateOpen(true)}>
@@ -319,7 +278,7 @@ export function ProjectsPage() {
         onCancel={() => setCreateOpen(false)}
         onOk={handleCreate}
         okText="생성"
-        cancelText="닫기"
+        cancelText="취소"
         confirmLoading={creating}
       >
         <Form form={form} layout="vertical">
@@ -328,7 +287,7 @@ export function ProjectsPage() {
             name="name"
             rules={[{ required: true, message: "프로젝트 이름을 입력하세요." }]}
           >
-            <Input placeholder="예: 새 프로젝트" />
+            <Input placeholder="예: 테스트 프로젝트" />
           </Form.Item>
           <Form.Item label="설명 (선택)" name="description">
             <Input.TextArea placeholder="설명 없음" rows={3} />

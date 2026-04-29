@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import {
   Alert,
@@ -21,13 +21,12 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  CloudDownloadOutlined,
+  DownloadOutlined,
   ExclamationCircleOutlined,
   InfoCircleOutlined,
+  LoadingOutlined,
   SearchOutlined,
-  SyncOutlined,
 } from "@ant-design/icons";
-
 import { apiGet, apiPost } from "../../../../tools/api";
 import { CesiumFeatureInspector, CesiumViewer } from "../../../../components/cesium";
 import type { CesiumFeatureInfo } from "../../../../components/cesium";
@@ -74,7 +73,7 @@ function statusTagProps(status?: string | null) {
     case "DONE":
       return { color: "success", icon: <CheckCircleOutlined /> };
     case "RUNNING":
-      return { color: "processing", icon: <SyncOutlined spin /> };
+      return { color: "processing", icon: <LoadingOutlined spin /> };
     case "FAILED":
       return { color: "error", icon: <CloseCircleOutlined /> };
     case "PENDING":
@@ -184,14 +183,20 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
     if (downloadingId === record.tile_job_id) return;
     setDownloadingId(record.tile_job_id);
     try {
-      const url = `/api/v1/tile/${projectId}/${record.tile_job_id}/download`;
-      const anchor = document.createElement("a");
+      const response = await fetch(`/api/v1/tile/${projectId}/${record.tile_job_id}/download`);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      const blob = await response.blob();
       const filename = "tiles.zip";
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
       anchor.href = url;
       anchor.download = filename;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       message.error("다운로드에 실패했습니다.");
     } finally {
@@ -310,7 +315,7 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
             <Button
               size="small"
               shape="circle"
-              icon={<CloudDownloadOutlined />}
+              icon={<DownloadOutlined />}
               loading={downloadingId === record.tile_job_id}
               disabled={!record.tile_job_id || record.status?.toUpperCase() !== "DONE"}
               onClick={(event) => handleDownload(event, record)}
@@ -657,3 +662,5 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
     </Flex>
   );
 }
+
+

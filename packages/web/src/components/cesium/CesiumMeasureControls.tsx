@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import { Button, Flex } from "antd";
 import {
-  AimOutlined,
-  AppstoreAddOutlined,
-  BorderOutlined,
-  CloseCircleOutlined,
-  ColumnHeightOutlined,
-  ColumnWidthOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
+  RiApps2Line,
+  RiCloseCircleLine,
+  RiFocus3Line,
+  RiRefreshLine,
+  RiRuler2Line,
+  RiRulerLine,
+  RiShapeLine,
+} from "react-icons/ri";
 import { CesiumToolbarPopover } from "./CesiumToolbarPopover";
 import type { MeasureMode } from "./useCesiumMeasure";
 
@@ -27,32 +27,32 @@ export function CesiumMeasureControls({
     {
       value: "none",
       label: "끄기",
-      icon: <CloseCircleOutlined />,
+      icon: <RiCloseCircleLine />,
     },
     {
       value: "position",
       label: "위치",
-      icon: <AimOutlined />,
+      icon: <RiFocus3Line />,
     },
     {
       value: "distance",
       label: "거리",
-      icon: <ColumnWidthOutlined />,
+      icon: <RiRulerLine />,
     },
     {
       value: "area",
       label: "면적",
-      icon: <BorderOutlined />,
+      icon: <RiShapeLine />,
     },
     {
       value: "vertical",
       label: "수직측정",
-      icon: <ColumnHeightOutlined />,
+      icon: <RiRuler2Line />,
     },
   ];
 
   return (
-    <CesiumToolbarPopover icon={<AppstoreAddOutlined />} title="측정 도구">
+    <CesiumToolbarPopover icon={<RiApps2Line />} title="측정 도구">
       <Flex className="cesium-measure-panel" align="center" gap={6} wrap="wrap">
         {options.map((option) => {
           const active = mode === option.value;
@@ -74,7 +74,7 @@ export function CesiumMeasureControls({
           size="small"
           shape="circle"
           className="cesium-measure-reset"
-          icon={<ReloadOutlined />}
+          icon={<RiRefreshLine />}
           onClick={onClear}
           aria-label="초기화"
         />

@@ -1,4 +1,4 @@
-.cesium-viewer-shell {
+﻿.cesium-viewer-shell {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -70,6 +70,11 @@
   justify-content: center;
 }
 
+.cesium-toolbar-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
 .cesium-toolbar-icon:hover {
   color: #f5f7ff;
   background: rgba(255, 255, 255, 0.12);
@@ -123,6 +128,11 @@
   min-width: 240px;
 }
 
+.cesium-measure-panel .ant-btn {
+  font-size: 11px;
+  font-weight: 400;
+}
+
 .cesium-measure-toggle {
   display: inline-flex;
   align-items: center;
@@ -139,10 +149,15 @@
   height: 14px;
 }
 
+.cesium-measure-reset svg {
+  width: 14px;
+  height: 14px;
+}
+
 .cesium-measure-toggle.is-active {
-  background: rgba(82, 179, 164, 0.85);
+  background: var(--ant-color-primary, #1677ff);
   color: #0b111a;
-  border-color: rgba(82, 179, 164, 0.9);
+  border-color: var(--ant-color-primary-hover, #4096ff);
 }
 
 .cesium-measure-reset {
@@ -193,35 +208,35 @@
 }
 
 .cesium-toolbar .ant-switch-checked {
-  background: rgba(82, 179, 164, 0.85);
+  background: var(--ant-color-primary, #1677ff);
 }
 
 .cesium-toolbar .ant-switch-checked:hover {
-  background: rgba(96, 197, 179, 0.95) !important;
+  background: var(--ant-color-primary-hover, #4096ff) !important;
 }
 
 .cesium-toolbar .ant-slider-track {
-  background: rgba(82, 179, 164, 0.8);
+  background: var(--ant-color-primary, #1677ff);
 }
 
 .cesium-toolbar .ant-slider-handle::after {
-  box-shadow: 0 0 0 2px rgba(82, 179, 164, 0.35);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ant-color-primary, #1677ff) 40%, transparent);
 }
 
 .cesium-terrain-panel .ant-switch-checked {
-  background: rgba(82, 179, 164, 0.85);
+  background: var(--ant-color-primary, #1677ff);
 }
 
 .cesium-terrain-panel .ant-switch-checked:hover {
-  background: rgba(96, 197, 179, 0.95) !important;
+  background: var(--ant-color-primary-hover, #4096ff) !important;
 }
 
 .cesium-terrain-panel .ant-slider-track {
-  background: rgba(82, 179, 164, 0.8);
+  background: var(--ant-color-primary, #1677ff);
 }
 
 .cesium-terrain-panel .ant-slider-handle::after {
-  box-shadow: 0 0 0 2px rgba(82, 179, 164, 0.35);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--ant-color-primary, #1677ff) 40%, transparent);
 }
 
 .cesium-viewer-root:fullscreen,
@@ -243,3 +258,7 @@
   width: 100%;
   height: 100%;
 }
+
+
+
+

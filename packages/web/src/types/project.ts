@@ -22,3 +22,15 @@ export type ImportJobItem = {
   finished_at?: string | null;
   created_at?: string | null;
 };
+
+export type ImportSkippedItem = {
+  file_name: string;
+  reason: string;
+};
+
+export type ImportUploadResponse = {
+  project_id: string;
+  uploaded?: ImportJobItem[];
+  skipped?: ImportSkippedItem[];
+  items?: ImportJobItem[];
+};

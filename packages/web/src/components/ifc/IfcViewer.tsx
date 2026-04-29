@@ -1,18 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import {
-  Button,
-  Checkbox,
-  Collapse,
-  Empty,
-  Spin,
-} from "antd";
-import {
-  AimOutlined,
-  FullscreenOutlined,
-  FullscreenExitOutlined,
-} from "@ant-design/icons";
-
+  RiAppsLine,
+  RiFocus3Line,
+  RiFullscreenExitLine,
+  RiFullscreenLine,
+} from "react-icons/ri";
+import { Button, Checkbox, Empty, Spin } from "antd";
 import * as OBC from "@thatopen/components";
 import * as THREE from "three";
 
@@ -65,6 +59,27 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
   const [entityGroups, setEntityGroups] = useState<EntityGroups | null>(null);
   const [entityVisibility, setEntityVisibility] = useState<Record<string, boolean>>({});
   const [classifierOpen, setClassifierOpen] = useState(false);
+  const closeSidebarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelSidebarClose = () => {
+    if (closeSidebarTimerRef.current) {
+      clearTimeout(closeSidebarTimerRef.current);
+      closeSidebarTimerRef.current = null;
+    }
+  };
+
+  const openSidebar = () => {
+    cancelSidebarClose();
+    setClassifierOpen(true);
+  };
+
+  const scheduleSidebarClose = () => {
+    cancelSidebarClose();
+    closeSidebarTimerRef.current = setTimeout(() => {
+      setClassifierOpen(false);
+      closeSidebarTimerRef.current = null;
+    }, 140);
+  };
 
   const resetViewerState = () => {
     setViewerEnabled(false);
@@ -104,6 +119,12 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      cancelSidebarClose();
     };
   }, []);
 
@@ -296,35 +317,44 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
     <div className="ifc-viewer" ref={viewerRef}>
       <div ref={containerRef} className="ifc-viewer-canvas" />
       {viewerEnabled && entityEntries.length ? (
-        <div
-          className="viewer-classifier"
-          onMouseEnter={() => setClassifierOpen(true)}
-          onMouseLeave={() => setClassifierOpen(false)}
-        >
-          <Collapse
-            size="small"
-            activeKey={classifierOpen ? ["entities"] : []}
-            items={[
-              {
-                key: "entities",
-                label: "IFC 분류 필터",
-                children: (
-                  <div className="viewer-classifier-list">
-                    {entityEntries.map(([name]) => (
-                      <Checkbox
-                        key={name}
-                        className="viewer-classifier-item"
-                        checked={entityVisibility[name] ?? true}
-                        onChange={(event) => handleToggleEntity(name, event.target.checked)}
-                      >
-                        {name}
-                      </Checkbox>
-                    ))}
-                  </div>
-                ),
-              },
-            ]}
-          />
+        <div className={`viewer-sidebar ${classifierOpen ? "is-open" : ""}`}>
+          <div className="viewer-sidebar-icons">
+            <button
+              type="button"
+              className="viewer-sidebar-icon"
+              onMouseEnter={openSidebar}
+              onMouseLeave={scheduleSidebarClose}
+              onFocus={openSidebar}
+              onBlur={scheduleSidebarClose}
+              onClick={() => {
+                cancelSidebarClose();
+                setClassifierOpen((prev) => !prev);
+              }}
+              aria-label="Toggle IFC classifier"
+              aria-expanded={classifierOpen}
+            >
+              <RiAppsLine />
+            </button>
+          </div>
+          <div
+            className="viewer-sidebar-panel"
+            onMouseEnter={openSidebar}
+            onMouseLeave={scheduleSidebarClose}
+          >
+            <div className="viewer-sidebar-title">IFC Classifier</div>
+            <div className="viewer-classifier-list">
+              {entityEntries.map(([name]) => (
+                <Checkbox
+                  key={name}
+                  className="viewer-classifier-item"
+                  checked={entityVisibility[name] ?? true}
+                  onChange={(event) => handleToggleEntity(name, event.target.checked)}
+                >
+                  {name}
+                </Checkbox>
+              ))}
+            </div>
+          </div>
         </div>
       ) : null}
       {viewerEnabled ? (
@@ -332,14 +362,14 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
           <Button
             size="small"
             type="text"
-            icon={<AimOutlined />}
+            icon={<RiFocus3Line />}
             onClick={handleFitModel}
             disabled={!modelReady}
           />
           <Button
             size="small"
             type="text"
-            icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+            icon={isFullscreen ? <RiFullscreenExitLine /> : <RiFullscreenLine />}
             onClick={handleToggleFullscreen}
           />
         </div>
@@ -359,7 +389,7 @@ export function IfcViewer({ fileUrl, active = true }: IfcViewerProps) {
               setViewerEnabled(true);
             }}
           >
-            {"IFC 미리보기"}
+            {"IFC 모델 보기"}
           </Button>
         </div>
       ) : null}

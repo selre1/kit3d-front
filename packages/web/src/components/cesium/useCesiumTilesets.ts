@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Cesium3DTileset, Cesium3DTileStyle, ShadowMode } from "cesium";
+import { Cesium3DTileset, Cesium3DTileStyle } from "cesium";
 import type { Viewer } from "cesium";
 import { applyTilesetBounds } from "./useCesiumUtility";
 import { fitCameraToTilesets } from "./useCameraMovement";
+
 
 type UseCesiumTilesetsOptions = {
   viewer: Viewer | null;
@@ -63,7 +64,7 @@ export function useCesiumTilesets({ viewer, urls }: UseCesiumTilesetsOptions) {
     const createTileset = async (url: string) => {
       try {
         const tileset = await Cesium3DTileset.fromUrl(url, {
-          shadows: ShadowMode.ENABLED,
+          //shadows: ShadowMode.ENABLED,
           maximumScreenSpaceError: 16,
         });
 
@@ -75,6 +76,14 @@ export function useCesiumTilesets({ viewer, urls }: UseCesiumTilesetsOptions) {
         }
 
         tileset.style = new Cesium3DTileStyle({
+          color: {
+              conditions: [
+                  ["${ifc_class} === 'IfcWall'", "color('#bababa')"],
+                  ["${ifc_class} === 'IfcSlab'", "color('#bababa')"],
+                  ["${ifc_class} === 'IfcWallStandardCase'", "color('#bababa')"],
+                  ["${ifc_class} === 'IfcOpeningElement'", "color('#bababa')"],
+              ]
+          },
           show: "${ifc_class} !== 'IfcOpeningElement'",
         });
 

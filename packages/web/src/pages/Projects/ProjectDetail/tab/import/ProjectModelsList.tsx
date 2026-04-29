@@ -17,12 +17,11 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
+  DownloadOutlined,
   ExclamationCircleOutlined,
-  FileMarkdownOutlined,
-  CloudDownloadOutlined,
-  SyncOutlined,
+  FileTextOutlined,
+  LoadingOutlined,
 } from "@ant-design/icons";
-
 import { apiGet } from "../../../../../tools/api";
 import { IfcViewer } from "../../../../../components/ifc/IfcViewer";
 import type { ImportJobItem } from "../../../../../types/project";
@@ -34,7 +33,7 @@ function statusTagProps(status?: string | null) {
     case "DONE":
       return { color: "success", icon: <CheckCircleOutlined /> };
     case "RUNNING":
-      return { color: "processing", icon: <SyncOutlined spin /> };
+      return { color: "processing", icon: <LoadingOutlined spin /> };
     case "FAILED":
       return { color: "error", icon: <CloseCircleOutlined /> };
     case "PENDING":
@@ -150,7 +149,7 @@ export function ProjectModelsList({
         ellipsis: true,
         render: (value) => (
           <div className="models-name">
-            <Avatar shape="square" size="small" icon={<FileMarkdownOutlined />} />
+            <Avatar shape="square" size="small" icon={<FileTextOutlined />} />
             <span>{value}</span>
           </div>
         ),
@@ -192,7 +191,7 @@ export function ProjectModelsList({
           <Button
             size="small"
             shape="circle"
-            icon={<CloudDownloadOutlined />}
+            icon={<DownloadOutlined />}
             loading={downloadingId === record.file_id}
             disabled={!record.file_id || record.status?.toUpperCase() !== "DONE"}
             onClick={(event) => handleDownload(event, record)}
@@ -304,3 +303,5 @@ export function ProjectModelsList({
     </div>
   );
 }
+
+
