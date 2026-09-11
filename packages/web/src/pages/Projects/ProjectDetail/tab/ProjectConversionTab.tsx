@@ -27,7 +27,7 @@ import {
   LoadingOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import { apiGet, apiPost } from "../../../../tools/api";
+import { apiDownload, apiGet, apiPost } from "../../../../tools/api";
 import { CesiumFeatureInspector, CesiumViewer } from "../../../../components/cesium";
 import type { CesiumFeatureInfo } from "../../../../components/cesium";
 import { formatDuration } from "../../../../utils/format";
@@ -56,6 +56,7 @@ type ProjectConversionTabProps = {
   projectId: string;
 };
 
+/** GET /api/v1/import/{project_id}/status — 프로젝트 단위 집계 1건 */
 type ImportStatusItem = {
   project_id: string;
   total: number;
@@ -63,7 +64,6 @@ type ImportStatusItem = {
   running: number;
   done: number;
   failed: number;
-  other: number;
   all_done: boolean;
 };
 
@@ -183,20 +183,10 @@ export function ProjectConversionTab({ projectId }: ProjectConversionTabProps) {
     if (downloadingId === record.tile_job_id) return;
     setDownloadingId(record.tile_job_id);
     try {
-      const response = await fetch(`/api/v1/tile/${projectId}/${record.tile_job_id}/download`);
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
-      }
-      const blob = await response.blob();
-      const filename = "tiles.zip";
-      const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = filename;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.URL.revokeObjectURL(url);
+      await apiDownload(
+        `/api/v1/tile/${projectId}/${record.tile_job_id}/download`,
+        `${record.tile_name?.trim() || record.tile_job_id}.zip`
+      );
     } catch (err) {
       message.error("다운로드에 실패했습니다.");
     } finally {

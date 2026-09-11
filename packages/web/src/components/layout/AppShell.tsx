@@ -9,7 +9,11 @@ import { MdOutlineTerrain } from "react-icons/md";
 import { useState } from "react";
 import type { ReactNode } from "react";
 
+import { MODEL_TYPE_LIST } from "../../config/modelTypes";
+
 const { Header, Sider, Content } = Layout;
+
+export const MODELS_MENU_KEY = "models";
 
 type AppShellProps = {
   children: ReactNode;
@@ -27,6 +31,10 @@ export function AppShell({
   contentClassName,
 }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
+  // 사용자가 직접 접거나 편 적이 없으면(null) 현재 메뉴에 맞춰 자동으로 펼친다.
+  const [manualOpenKeys, setManualOpenKeys] = useState<string[] | null>(null);
+  const openKeys =
+    manualOpenKeys ?? (activeMenu.startsWith(`${MODELS_MENU_KEY}:`) ? [MODELS_MENU_KEY] : []);
 
   return (
     <Layout className="app-shell">
@@ -46,11 +54,21 @@ export function AppShell({
           theme="dark"
           mode="inline"
           selectedKeys={[activeMenu]}
+          openKeys={openKeys}
+          onOpenChange={(keys) => setManualOpenKeys(keys as string[])}
           onClick={({ key }) => onMenuChange(key)}
           inlineCollapsed={collapsed}
           items={[
             { key: "home", label: "홈", icon: <RiHome5Line /> },
-            { key: "projects", label: "3D 모델", icon: <ViewInArOutlined /> },
+            {
+              key: MODELS_MENU_KEY,
+              label: "3D 모델",
+              icon: <ViewInArOutlined />,
+              children: MODEL_TYPE_LIST.map((modelType) => ({
+                key: modelType.menuKey,
+                label: modelType.label,
+              })),
+            },
             { key: "dem", label: "지형 모델", icon: <MdOutlineTerrain /> },
             { key: "settings", label: "설정", icon: <RiSettings3Line /> },
           ]}

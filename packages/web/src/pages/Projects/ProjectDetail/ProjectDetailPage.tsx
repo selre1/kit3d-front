@@ -3,6 +3,7 @@ import { Tabs } from "antd";
 import { ImportOutlined, SwapOutlined } from "@ant-design/icons";
 import { useParams, useSearchParams } from "react-router-dom";
 
+import { resolveModelType } from "../../../config/modelTypes";
 import { apiGet } from "../../../tools/api";
 import type { Project } from "../../../types/project";
 import { ProjectConversionTab } from "./tab/ProjectConversionTab";
@@ -13,10 +14,13 @@ type ProjectDetailPageProps = {
 };
 
 export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
-  const { id } = useParams();
+  const { id, modelType: modelTypeParam } = useParams();
   const projectId = useMemo(() => id ?? "", [id]);
+  const modelType = useMemo(() => resolveModelType(modelTypeParam), [modelTypeParam]);
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeKey = searchParams.get("tab") === "conversion" ? "conversion" : "import";
+  // 타일링 미지원 타입(FBX)은 변환 탭 자체가 없으므로 임포트로 되돌린다.
+  const activeKey =
+    searchParams.get("tab") === "conversion" && modelType.tiling ? "conversion" : "import";
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -57,18 +61,24 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
           icon: <ImportOutlined />,
           children: (
             <ProjectImportTab
+              key={modelType.key}
               projectId={projectId}
+              modelType={modelType}
               loading={loading}
               isActive={activeKey === "import"}
             />
           ),
         },
-        {
-          key: "conversion",
-          label: "변환",
-          icon: <SwapOutlined />,
-          children: <ProjectConversionTab projectId={projectId} />,
-        },
+        ...(modelType.tiling
+          ? [
+              {
+                key: "conversion",
+                label: "변환",
+                icon: <SwapOutlined />,
+                children: <ProjectConversionTab projectId={projectId} />,
+              },
+            ]
+          : []),
       ]}
     />
   );

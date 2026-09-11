@@ -1,9 +1,13 @@
+import type { ModelTypeKey } from "../config/modelTypes";
+
 export type Project = {
   project_id: string;
   name: string;
   description?: string | null;
   created_at?: string | null;
   models_count?: number | null;
+  /** 포맷별 모델 수. 서버 배포 전에는 내려오지 않으므로 models_count 로 폴백한다. */
+  models_count_by_format?: Partial<Record<ModelTypeKey, number>> | null;
 };
 
 export type ImportJobItem = {

@@ -22,7 +22,8 @@ import {
   FileTextOutlined,
   LoadingOutlined,
 } from "@ant-design/icons";
-import { apiGet } from "../../../../../tools/api";
+import type { ModelTypeConfig } from "../../../../../config/modelTypes";
+import { apiDownload, apiGet } from "../../../../../tools/api";
 import { IfcViewer } from "../../../../../components/ifc/IfcViewer";
 import type { ImportJobItem } from "../../../../../types/project";
 import { formatBytes, formatDuration, parseDate } from "../../../../../utils/format";
@@ -45,6 +46,7 @@ function statusTagProps(status?: string | null) {
 
 type ProjectModelsListProps = {
   projectId: string;
+  modelType: ModelTypeConfig;
   refreshKey?: number;
   onRestartImport?: (item: ImportJobItem) => void;
   headerAction?: ReactNode;
@@ -53,6 +55,7 @@ type ProjectModelsListProps = {
 
 export function ProjectModelsList({
   projectId,
+  modelType,
   refreshKey = 0,
   onRestartImport,
   headerAction,
@@ -70,7 +73,7 @@ export function ProjectModelsList({
 
   useEffect(() => {
     setPage(1);
-  }, [projectId]);
+  }, [projectId, modelType.key]);
 
   useEffect(() => {
     let active = true;
@@ -78,10 +81,11 @@ export function ProjectModelsList({
     const offset = (page - 1) * pageSize;
     const requestLimit = pageSize + 1;
     apiGet<ImportJobItem[]>(
-      `/api/v1/import/${projectId}/list?limit=${requestLimit}&offset=${offset}`
+      `${modelType.apiBase}/${projectId}/list?limit=${requestLimit}&offset=${offset}`
     )
       .then((data) => {
         if (!active) return;
+        // 타입별 엔드포인트라 서버가 이미 포맷을 걸러서 내려준다.
         const hasMore = data.length > pageSize;
         const sliced = data.slice(0, pageSize);
         const sorted = [...sliced].sort(
@@ -104,7 +108,7 @@ export function ProjectModelsList({
     return () => {
       active = false;
     };
-  }, [projectId, page, refreshKey]);
+  }, [projectId, page, refreshKey, modelType]);
 
   const handleDownload = async (event: MouseEvent<HTMLElement>, record: ImportJobItem) => {
     event.stopPropagation();
@@ -112,20 +116,10 @@ export function ProjectModelsList({
     if (downloadingId === record.file_id) return;
     setDownloadingId(record.file_id);
     try {
-      const response = await fetch(`/api/v1/import/${projectId}/${record.file_id}/download`);
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`);
-      }
-      const blob = await response.blob();
-      const filename = record.file_name || "download.ifc";
-      const url = window.URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = filename;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      window.URL.revokeObjectURL(url);
+      await apiDownload(
+        `${modelType.apiBase}/${projectId}/${record.file_id}/download`,
+        record.file_name || `download.${modelType.key}`
+      );
     } catch (err) {
       message.error("다운로드에 실패했습니다.");
     } finally {
@@ -166,6 +160,10 @@ export function ProjectModelsList({
         dataIndex: "status",
         key: "status",
         render: (value) => {
+          // 타일링 미지원 타입(FBX)은 임포트 작업 없이 파일만 보관되므로 status 가 비어서 내려온다.
+          if (!value && !modelType.tiling) {
+            return <Tag color="default">변환 대상 아님</Tag>;
+          }
           const props = statusTagProps(value);
           return (
             <Tag color={props.color} icon={props.icon} variant="solid">
@@ -193,14 +191,18 @@ export function ProjectModelsList({
             shape="circle"
             icon={<DownloadOutlined />}
             loading={downloadingId === record.file_id}
-            disabled={!record.file_id || record.status?.toUpperCase() !== "DONE"}
+            disabled={
+              !record.file_id ||
+              // 임포트 작업이 없는 타입은 업로드만 끝나면 원본을 받을 수 있다.
+              (modelType.tiling && record.status?.toUpperCase() !== "DONE")
+            }
             onClick={(event) => handleDownload(event, record)}
             aria-label="Download original"
           />
         ),
       },
     ],
-    [items.length, pageOffset, downloadingId, projectId]
+    [items.length, pageOffset, downloadingId, projectId, modelType]
   );
 
   const detail = useMemo(() => {
@@ -209,11 +211,24 @@ export function ProjectModelsList({
       selected.status?.toUpperCase() === "DONE"
         ? formatDuration(selected.started_at, selected.finished_at)
         : "";
+    // 임포트 작업이 없는 타입은 작업 관련 항목이 모두 비므로 감춘다.
+    if (!modelType.tiling) {
+      return (
+        <Descriptions column={1} bordered size="small">
+          <Descriptions.Item label="파일 포맷">
+            {(selected.file_format || modelType.shortLabel).toUpperCase()}
+          </Descriptions.Item>
+          <Descriptions.Item label="등록 시간">{selected.uploaded_at || ""}</Descriptions.Item>
+          <Descriptions.Item label="변환">3D Tiles 변환 대상이 아닙니다.</Descriptions.Item>
+        </Descriptions>
+      );
+    }
+
     return (
       <Descriptions column={1} bordered size="small">
         <Descriptions.Item label="작업 종류">{selected.job_type}</Descriptions.Item>
         <Descriptions.Item label="파일 포맷">
-          {(selected.file_format || "IFC").toUpperCase()}
+          {(selected.file_format || modelType.shortLabel).toUpperCase()}
         </Descriptions.Item>
         <Descriptions.Item label="작업 시작 시간">{selected.started_at || ""}</Descriptions.Item>
         <Descriptions.Item label="작업 종료 시간">{selected.finished_at || ""}</Descriptions.Item>
@@ -222,7 +237,7 @@ export function ProjectModelsList({
         ) : null}
       </Descriptions>
     );
-  }, [selected]);
+  }, [selected, modelType]);
 
   const canRestart = selected?.status?.toUpperCase() === "FAILED";
 
@@ -253,7 +268,7 @@ export function ProjectModelsList({
           gap={12}
         >
           <Typography.Text className="models-table-title">
-            {"모델 상태"}
+            {`${modelType.shortLabel} 모델 상태`}
           </Typography.Text>
           {headerAction}
         </Flex>
@@ -286,7 +301,14 @@ export function ProjectModelsList({
         <div className="models-detail-title">{"상세 정보"}</div>
         <Flex vertical gap={12} className="models-detail-body">
           <div className="models-detail-viewer">
-            <IfcViewer fileUrl={selected?.file_url ?? null} active={isActive} />
+            {modelType.viewer === "ifc" ? (
+              <IfcViewer fileUrl={selected?.file_url ?? null} active={isActive} />
+            ) : (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={`${modelType.shortLabel} 미리보기는 아직 지원하지 않습니다.`}
+              />
+            )}
           </div>
           <div className="models-detail-info">
             {detail}

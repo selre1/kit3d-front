@@ -4,6 +4,8 @@ import { Carousel } from "antd";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { DEFAULT_MODEL_TYPE, MODEL_TYPES } from "../../config/modelTypes";
+
 type FeatureGroup = {
   key: string;
   title: string;
@@ -53,7 +55,7 @@ const FEATURE_GROUPS: FeatureGroup[] = [
       "3D Tiles 전용 뷰어 및 스트리밍 3D 타일 서비스 지원",
     ],
     actionLabel: "3D 프로젝트 바로가기",
-    actionPath: "/projects",
+    actionPath: MODEL_TYPES[DEFAULT_MODEL_TYPE].basePath,
   },
   {
     key: "terrain",
@@ -135,7 +137,7 @@ export function HomaPage() {
           >
             <Button
               variant="contained"
-              onClick={() => navigate("/projects")}
+              onClick={() => navigate(MODEL_TYPES[DEFAULT_MODEL_TYPE].basePath)}
               sx={{
                 minWidth: 214,
                 borderRadius: 999,

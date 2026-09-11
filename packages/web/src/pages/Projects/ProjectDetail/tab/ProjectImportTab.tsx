@@ -3,17 +3,25 @@ import { Button, Modal, Progress, Spin, Upload, message } from "antd";
 import type { UploadFile } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 
+import type { ModelTypeConfig } from "../../../../config/modelTypes";
+import { matchesModelType } from "../../../../config/modelTypes";
 import { apiPost } from "../../../../tools/api";
 import type { ImportJobItem, ImportUploadResponse } from "../../../../types/project";
 import { ProjectModelsList } from "./import/ProjectModelsList";
 
 type ProjectImportTabProps = {
   projectId: string;
+  modelType: ModelTypeConfig;
   loading: boolean;
   isActive?: boolean;
 };
 
-export function ProjectImportTab({ projectId, loading, isActive = true }: ProjectImportTabProps) {
+export function ProjectImportTab({
+  projectId,
+  modelType,
+  loading,
+  isActive = true,
+}: ProjectImportTabProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState(0);
@@ -55,7 +63,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
   const handleUpload = () => {
     if (!projectId) return;
     if (!fileList.length) {
-      message.warning("Select IFC files first.");
+      message.warning(`${modelType.shortLabel} 파일을 먼저 선택하세요.`);
       return;
     }
 
@@ -116,7 +124,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
       setUploading(false);
     };
 
-    xhr.open("POST", `/api/v1/import/${projectId}/process`);
+    xhr.open("POST", `${modelType.apiBase}/${projectId}/process`);
     xhr.send(formData);
   };
 
@@ -128,6 +136,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
         ) : projectId ? (
           <ProjectModelsList
             projectId={projectId}
+            modelType={modelType}
             refreshKey={refreshKey}
             isActive={isActive}
             onRestartImport={handleRestartImport}
@@ -146,7 +155,7 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
 
       <Modal
         className="import-upload-modal"
-        title="업로드"
+        title={`${modelType.shortLabel} 업로드`}
         open={uploadOpen}
         onCancel={() => {
           setUploadOpen(false);
@@ -156,9 +165,13 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
       >
         <Upload.Dragger
           multiple
-          accept=".ifc"
+          accept={modelType.accept}
           fileList={fileList}
           beforeUpload={(file) => {
+            if (!matchesModelType(modelType, file.name)) {
+              message.warning(`${file.name}: ${modelType.accept} 파일만 업로드할 수 있습니다.`);
+              return Upload.LIST_IGNORE;
+            }
             setFileList((prev) => [...prev, file]);
             return false;
           }}
@@ -170,8 +183,12 @@ export function ProjectImportTab({ projectId, loading, isActive = true }: Projec
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
           </p>
-          <p className="ant-upload-text">IFC 파일을 드래그하거나 클릭해 업로드하세요.</p>
-          <p className="ant-upload-hint">여러 개 IFC 파일을 한 번에 올릴 수 있습니다.</p>
+          <p className="ant-upload-text">
+            {modelType.shortLabel} 파일을 드래그하거나 클릭해 업로드하세요.
+          </p>
+          <p className="ant-upload-hint">
+            여러 개 {modelType.shortLabel} 파일을 한 번에 올릴 수 있습니다.
+          </p>
         </Upload.Dragger>
 
         {uploading ? (

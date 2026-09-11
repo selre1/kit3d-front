@@ -12,8 +12,10 @@ import {
   Spin,
 } from "antd";
 import { RiFileTextLine } from "react-icons/ri";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
+import { resolveModelType } from "../../config/modelTypes";
+import type { ModelTypeConfig } from "../../config/modelTypes";
 import { apiGet, apiPost } from "../../tools/api";
 import type { Project } from "../../types/project";
 
@@ -32,15 +34,19 @@ type ProjectFormValues = {
   description?: string;
 };
 
-function mapProjectToCard(project: Project): ProjectCard {
+function mapProjectToCard(project: Project, modelType: ModelTypeConfig): ProjectCard {
+  // 서버가 models_count_by_format 을 내려주면 선택한 타입의 개수를, 아니면 전체 개수를 쓴다.
+  const byFormat = project.models_count_by_format?.[modelType.key];
+  const models = byFormat ?? project.models_count ?? 0;
+
   return {
     id: project.project_id,
     name: project.name,
     description: project.description || "",
     updated: project.created_at ? `${project.created_at}` : "",
     owner: "프로젝트 소유자",
-    models: project.models_count || 0,
-    empty: (project.models_count || 0) === 0,
+    models,
+    empty: models === 0,
   };
 }
 
@@ -58,6 +64,8 @@ export function ProjectsPage() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [form] = Form.useForm<ProjectFormValues>();
   const navigate = useNavigate();
+  const { modelType: modelTypeParam } = useParams();
+  const modelType = useMemo(() => resolveModelType(modelTypeParam), [modelTypeParam]);
   const pageSize = 8;
 
   useEffect(() => {
@@ -70,7 +78,7 @@ export function ProjectsPage() {
         if (!active) return;
         const hasMore = data.length > pageSize;
         const sliced = data.slice(0, pageSize);
-        const next = sliced.map(mapProjectToCard);
+        const next = sliced.map((item) => mapProjectToCard(item, modelType));
         setProjects(next.length ? next : []);
         setHasNext(hasMore);
         setError(null);
@@ -87,7 +95,7 @@ export function ProjectsPage() {
     return () => {
       active = false;
     };
-  }, [page, refreshKey]);
+  }, [page, refreshKey, modelType]);
 
   useEffect(() => {
     const keyword = searchText.trim();
@@ -102,7 +110,7 @@ export function ProjectsPage() {
     apiGet<Project[]>("/api/v1/project/list?limit=2000&offset=0")
       .then((data) => {
         if (!active) return;
-        const mapped = (data ?? []).map(mapProjectToCard);
+        const mapped = (data ?? []).map((item) => mapProjectToCard(item, modelType));
         setSearchProjects(mapped);
       })
       .catch((err: Error) => {
@@ -117,7 +125,7 @@ export function ProjectsPage() {
     return () => {
       active = false;
     };
-  }, [searchText]);
+  }, [searchText, modelType]);
 
   useEffect(() => {
     setPage(1);
@@ -196,7 +204,7 @@ export function ProjectsPage() {
               hoverable
               variant="borderless"
               onClick={() => {
-                navigate(`/projects/${project.id}`);
+                navigate(`${modelType.basePath}/${project.id}`);
               }}
             >
               <div className="project-meta">
@@ -240,6 +248,7 @@ export function ProjectsPage() {
     hasNext,
     isSearching,
     loading,
+    modelType,
     navigate,
     page,
     pageSize,
@@ -250,8 +259,10 @@ export function ProjectsPage() {
 
   return (
     <>
-      <div className="page-title">프로젝트 목록</div>
-      <div className="page-subtitle">프로젝트를 선택하거나 새 프로젝트를 생성하세요.</div>
+      <div className="page-title">{modelType.label} 프로젝트 목록</div>
+      <div className="page-subtitle">
+        {modelType.shortLabel} 프로젝트를 선택하거나 새 프로젝트를 생성하세요.
+      </div>
 
       <div className="toolbar">
         <div className="toolbar-left">
