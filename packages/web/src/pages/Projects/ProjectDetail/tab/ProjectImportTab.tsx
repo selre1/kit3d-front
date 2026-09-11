@@ -35,6 +35,31 @@ export function ProjectImportTab({
     return reason || "unknown";
   };
 
+  /**
+   * 업로드 실패 안내.
+   * 400 은 확장자가 경로와 맞지 않는 경우, 409 는 프로젝트 타입이 다른 경우(파일은 저장되지 않음),
+   * 404 는 프로젝트가 없는 경우로 서버가 구분해 준다.
+   */
+  const getUploadErrorMessage = (status: number, responseText: string) => {
+    let detail = "";
+    try {
+      detail = (JSON.parse(responseText) as { detail?: string })?.detail ?? "";
+    } catch {
+      detail = "";
+    }
+
+    if (status === 409) {
+      return detail || `${modelType.shortLabel} 프로젝트가 아닙니다. 프로젝트 타입을 확인해 주세요.`;
+    }
+    if (status === 400) {
+      return detail || `${modelType.shortLabel} 파일만 업로드할 수 있습니다.`;
+    }
+    if (status === 404) {
+      return detail || "프로젝트를 찾을 수 없습니다.";
+    }
+    return detail || `업로드에 실패했습니다. (${status})`;
+  };
+
   const handleRestartImport = (item: ImportJobItem) => {
     const jobId = item.job_id;
     if (!jobId) {
@@ -114,7 +139,7 @@ export function ProjectImportTab({
         setUploadOpen(false);
         resetUploadState();
       } else {
-        message.error(`Upload failed: ${xhr.status}`);
+        message.error(getUploadErrorMessage(xhr.status, xhr.responseText));
         setUploading(false);
       }
     };
@@ -124,7 +149,7 @@ export function ProjectImportTab({
       setUploading(false);
     };
 
-    xhr.open("POST", `${modelType.apiBase}/${projectId}/process`);
+    xhr.open("POST", `${modelType.importApiBase}/${projectId}/process`);
     xhr.send(formData);
   };
 

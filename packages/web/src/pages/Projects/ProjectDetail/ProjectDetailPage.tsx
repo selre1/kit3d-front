@@ -29,7 +29,8 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
 
     let active = true;
     setLoading(true);
-    apiGet<Project[]>("/api/v1/project/list")
+    // TODO: 서버가 GET /project/{id} 를 배포하면(요청서 07번) 단건 조회로 교체한다.
+    apiGet<Project[]>(`${modelType.projectApiBase}/list`)
       .then((data) => {
         if (!active) return;
         const found = data.find((item) => item.project_id === projectId) || null;
@@ -43,7 +44,7 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
     return () => {
       active = false;
     };
-  }, [projectId, onProjectLoaded]);
+  }, [projectId, onProjectLoaded, modelType]);
 
   return (
     <Tabs

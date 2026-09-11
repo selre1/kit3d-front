@@ -81,7 +81,7 @@ export function ProjectModelsList({
     const offset = (page - 1) * pageSize;
     const requestLimit = pageSize + 1;
     apiGet<ImportJobItem[]>(
-      `${modelType.apiBase}/${projectId}/list?limit=${requestLimit}&offset=${offset}`
+      `${modelType.importApiBase}/${projectId}/list?limit=${requestLimit}&offset=${offset}`
     )
       .then((data) => {
         if (!active) return;
@@ -117,7 +117,7 @@ export function ProjectModelsList({
     setDownloadingId(record.file_id);
     try {
       await apiDownload(
-        `${modelType.apiBase}/${projectId}/${record.file_id}/download`,
+        `${modelType.importApiBase}/${projectId}/${record.file_id}/download`,
         record.file_name || `download.${modelType.key}`
       );
     } catch (err) {

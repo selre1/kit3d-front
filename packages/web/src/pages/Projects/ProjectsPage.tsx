@@ -15,7 +15,6 @@ import { RiFileTextLine } from "react-icons/ri";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { resolveModelType } from "../../config/modelTypes";
-import type { ModelTypeConfig } from "../../config/modelTypes";
 import { apiGet, apiPost } from "../../tools/api";
 import type { Project } from "../../types/project";
 
@@ -34,10 +33,9 @@ type ProjectFormValues = {
   description?: string;
 };
 
-function mapProjectToCard(project: Project, modelType: ModelTypeConfig): ProjectCard {
-  // 서버가 models_count_by_format 을 내려주면 선택한 타입의 개수를, 아니면 전체 개수를 쓴다.
-  const byFormat = project.models_count_by_format?.[modelType.key];
-  const models = byFormat ?? project.models_count ?? 0;
+function mapProjectToCard(project: Project): ProjectCard {
+  // 프로젝트가 타입 전용이므로 models_count 가 곧 그 타입의 모델 수다.
+  const models = project.models_count ?? 0;
 
   return {
     id: project.project_id,
@@ -73,12 +71,12 @@ export function ProjectsPage() {
     setLoading(true);
     const offset = (page - 1) * pageSize;
     const requestLimit = pageSize + 1;
-    apiGet<Project[]>(`/api/v1/project/list?limit=${requestLimit}&offset=${offset}`)
+    apiGet<Project[]>(`${modelType.projectApiBase}/list?limit=${requestLimit}&offset=${offset}`)
       .then((data) => {
         if (!active) return;
         const hasMore = data.length > pageSize;
         const sliced = data.slice(0, pageSize);
-        const next = sliced.map((item) => mapProjectToCard(item, modelType));
+        const next = sliced.map(mapProjectToCard);
         setProjects(next.length ? next : []);
         setHasNext(hasMore);
         setError(null);
@@ -107,10 +105,11 @@ export function ProjectsPage() {
 
     let active = true;
     setSearchLoading(true);
-    apiGet<Project[]>("/api/v1/project/list?limit=2000&offset=0")
+    // TODO: 서버가 q= 검색을 배포하면(요청서 06번) 전량 조회를 걷어낸다.
+    apiGet<Project[]>(`${modelType.projectApiBase}/list?limit=2000&offset=0`)
       .then((data) => {
         if (!active) return;
-        const mapped = (data ?? []).map((item) => mapProjectToCard(item, modelType));
+        const mapped = (data ?? []).map(mapProjectToCard);
         setSearchProjects(mapped);
       })
       .catch((err: Error) => {
@@ -135,7 +134,8 @@ export function ProjectsPage() {
     try {
       const values = await form.validateFields();
       setCreating(true);
-      await apiPost<Project>("/api/v1/project/create", values);
+      // 경로가 프로젝트 타입을 결정한다. body 에는 타입을 넣지 않는다.
+      await apiPost<Project>(`${modelType.projectApiBase}/create`, values);
       form.resetFields();
       setCreateOpen(false);
       setPage(1);

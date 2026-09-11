@@ -5,9 +5,10 @@ export type Project = {
   name: string;
   description?: string | null;
   created_at?: string | null;
+  /** 프로젝트가 속한 모델 타입. 프로젝트는 타입 전용이라 경로로 이미 갈린다. */
+  format?: ModelTypeKey | null;
+  /** 그 프로젝트의 파일 수. 프로젝트가 한 타입에 속하므로 곧 해당 타입의 모델 수다. */
   models_count?: number | null;
-  /** 포맷별 모델 수. 서버 배포 전에는 내려오지 않으므로 models_count 로 폴백한다. */
-  models_count_by_format?: Partial<Record<ModelTypeKey, number>> | null;
 };
 
 export type ImportJobItem = {

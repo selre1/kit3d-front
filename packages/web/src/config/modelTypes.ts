@@ -14,12 +14,18 @@ export type ModelTypeConfig = {
   /** 이 타입의 목록 페이지 경로 */
   basePath: string;
   /**
+   * 프로젝트 API 의 타입별 base path.
+   * 프로젝트는 타입 전용이며 경로가 타입을 결정한다(생성 body 에 타입을 넣지 않는다).
+   * 예) 목록 `${projectApiBase}/list`, 생성 `${projectApiBase}/create`
+   */
+  projectApiBase: string;
+  /**
    * 임포트 API 의 타입별 base path.
    * 서버가 포맷별로 엔드포인트를 분리해 목록/업로드/다운로드를 알아서 걸러주므로,
    * 프론트에서 확장자로 다시 거를 필요가 없다.
-   * 예) 목록 `${apiBase}/{project_id}/list`, 업로드 `${apiBase}/{project_id}/process`
+   * 예) 목록 `${importApiBase}/{project_id}/list`, 업로드 `${importApiBase}/{project_id}/process`
    */
-  apiBase: string;
+  importApiBase: string;
   /** 사이드바 메뉴 키 */
   menuKey: string;
   /** 상세 뷰어 지원 여부 */
@@ -41,7 +47,8 @@ export const MODEL_TYPES: Record<ModelTypeKey, ModelTypeConfig> = {
     accept: ".ifc",
     extensions: ["ifc"],
     basePath: "/models/ifc",
-    apiBase: "/api/v1/import",
+    projectApiBase: "/api/v1/project",
+    importApiBase: "/api/v1/import",
     menuKey: "models:ifc",
     viewer: "ifc",
     tiling: true,
@@ -53,7 +60,8 @@ export const MODEL_TYPES: Record<ModelTypeKey, ModelTypeConfig> = {
     accept: ".fbx",
     extensions: ["fbx"],
     basePath: "/models/fbx",
-    apiBase: "/api/v1/import/fbx",
+    projectApiBase: "/api/v1/project/fbx",
+    importApiBase: "/api/v1/import/fbx",
     menuKey: "models:fbx",
     viewer: "none",
     tiling: false,
