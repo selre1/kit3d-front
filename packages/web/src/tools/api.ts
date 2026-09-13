@@ -1,5 +1,41 @@
 type RequestInitWithJson = RequestInit & { json?: unknown };
 
+/**
+ * 실패한 HTTP 응답.
+ * 서버가 상황을 상태 코드로 구분해 주므로(확장자 400 / 프로젝트 타입·선행조건 409 / 없음 404)
+ * 호출부가 코드별로 다른 안내를 띄울 수 있도록 status 와 detail 을 함께 들고 다닌다.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  /** 서버가 준 detail 문구. 없으면 빈 문자열. */
+  readonly detail: string;
+
+  constructor(status: number, detail: string, statusText?: string) {
+    super(detail || `Request failed: ${status} ${statusText ?? ""}`.trim());
+    this.name = "ApiError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+export function isApiError(err: unknown): err is ApiError {
+  return err instanceof ApiError;
+}
+
+/** FastAPI 는 실패를 {"detail": "..."} 로 내려준다. 형태가 달라도 던지지 않는다. */
+async function readDetail(res: Response): Promise<string> {
+  try {
+    const text = await res.text();
+    if (!text) return "";
+    const parsed = JSON.parse(text) as { detail?: unknown };
+    const detail = parsed?.detail;
+    if (typeof detail === "string") return detail;
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 async function request<T>(path: string, options?: RequestInitWithJson): Promise<T> {
   const init: RequestInit = { ...options };
   if (options?.json !== undefined) {
@@ -12,7 +48,7 @@ async function request<T>(path: string, options?: RequestInitWithJson): Promise<
 
   const res = await fetch(`${path}`, init);
   if (!res.ok) {
-    throw new Error(`Request failed: ${res.status} ${res.statusText}`);
+    throw new ApiError(res.status, await readDetail(res), res.statusText);
   }
   return res.json() as Promise<T>;
 }

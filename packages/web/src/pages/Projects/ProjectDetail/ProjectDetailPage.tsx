@@ -18,9 +18,7 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
   const projectId = useMemo(() => id ?? "", [id]);
   const modelType = useMemo(() => resolveModelType(modelTypeParam), [modelTypeParam]);
   const [searchParams, setSearchParams] = useSearchParams();
-  // 타일링 미지원 타입(FBX)은 변환 탭 자체가 없으므로 임포트로 되돌린다.
-  const activeKey =
-    searchParams.get("tab") === "conversion" && modelType.tiling ? "conversion" : "import";
+  const activeKey = searchParams.get("tab") === "conversion" ? "conversion" : "import";
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -70,16 +68,18 @@ export function ProjectDetailPage({ onProjectLoaded }: ProjectDetailPageProps) {
             />
           ),
         },
-        ...(modelType.tiling
-          ? [
-              {
-                key: "conversion",
-                label: "변환",
-                icon: <SwapOutlined />,
-                children: <ProjectConversionTab projectId={projectId} />,
-              },
-            ]
-          : []),
+        {
+          key: "conversion",
+          label: "변환",
+          icon: <SwapOutlined />,
+          children: (
+            <ProjectConversionTab
+              key={modelType.key}
+              projectId={projectId}
+              modelType={modelType}
+            />
+          ),
+        },
       ]}
     />
   );

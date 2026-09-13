@@ -1,5 +1,13 @@
 export type ModelTypeKey = "ifc" | "fbx";
 
+/**
+ * 3D Tiles 변환 파이프라인 종류.
+ * 엔드포인트·요청 옵션·응답 스키마가 서로 다르다.
+ * - `ifc`  : IFC 클래스 단위로 타일셋을 쪼갠다. max_features_per_tile / geometric_error
+ * - `fbx`  : 프로젝트의 FBX 전체가 타일셋 하나가 된다. crs / rotate_x_axis / split_by_node
+ */
+export type TilingPipeline = "ifc" | "fbx";
+
 export type ModelTypeConfig = {
   /** URL 세그먼트이자 메뉴 키로 쓰이는 식별자 */
   key: ModelTypeKey;
@@ -9,8 +17,13 @@ export type ModelTypeConfig = {
   shortLabel: string;
   /** 업로드 input 의 accept 속성 */
   accept: string;
-  /** 허용 확장자 (소문자, 점 없음) */
+  /** 이 타입의 모델 포맷 (소문자, 점 없음). 서버 file_format 과 비교한다. */
   extensions: string[];
+  /**
+   * 업로드로 받아주는 확장자 (소문자, 점 없음).
+   * FBX 는 텍스처(.fbm)를 함께 올리기 위해 zip 컨테이너를 허용하므로 모델 포맷과 다르다.
+   */
+  uploadExtensions: string[];
   /** 이 타입의 목록 페이지 경로 */
   basePath: string;
   /**
@@ -26,17 +39,23 @@ export type ModelTypeConfig = {
    * 예) 목록 `${importApiBase}/{project_id}/list`, 업로드 `${importApiBase}/{project_id}/process`
    */
   importApiBase: string;
+  /**
+   * 3D Tiles API 의 타입별 base path.
+   * 예) 변환 `${tileApiBase}/{project_id}/tiling`, 목록 `${tileApiBase}/{project_id}/list`
+   */
+  tileApiBase: string;
   /** 사이드바 메뉴 키 */
   menuKey: string;
   /** 상세 뷰어 지원 여부 */
   viewer: "ifc" | "none";
   /**
-   * 3D Tiles 변환(타일링) 지원 여부.
-   * 서버 타일링 파이프라인이 IFC 클래스 단위라 FBX 는 대상이 아니며,
-   * FBX 는 업로드 시 import_job 없이 파일만 보관된다(백엔드 A안).
-   * false 이면 변환 탭을 감추고 목록의 작업상태를 "변환 대상 아님"으로 표시한다.
+   * 업로드한 파일마다 임포트 작업(import_job)이 생기는지.
+   * FBX 는 임포트 단계 없이 파일만 보관되어 status / job_id 가 null 로 내려오고,
+   * 재시도할 작업도 /status 집계도 없다. 업로드 직후 바로 변환할 수 있다.
    */
-  tiling: boolean;
+  importJobs: boolean;
+  /** 이 타입이 쓰는 변환 파이프라인 */
+  tiling: TilingPipeline;
 };
 
 export const MODEL_TYPES: Record<ModelTypeKey, ModelTypeConfig> = {
@@ -46,25 +65,31 @@ export const MODEL_TYPES: Record<ModelTypeKey, ModelTypeConfig> = {
     shortLabel: "IFC",
     accept: ".ifc",
     extensions: ["ifc"],
+    uploadExtensions: ["ifc"],
     basePath: "/models/ifc",
     projectApiBase: "/api/v1/project",
     importApiBase: "/api/v1/import",
+    tileApiBase: "/api/v1/tile",
     menuKey: "models:ifc",
     viewer: "ifc",
-    tiling: true,
+    importJobs: true,
+    tiling: "ifc",
   },
   fbx: {
     key: "fbx",
     label: "FBX 모델",
     shortLabel: "FBX",
-    accept: ".fbx",
+    accept: ".zip,.fbx",
     extensions: ["fbx"],
+    uploadExtensions: ["fbx", "zip"],
     basePath: "/models/fbx",
     projectApiBase: "/api/v1/project/fbx",
     importApiBase: "/api/v1/import/fbx",
+    tileApiBase: "/api/v1/tile/fbx",
     menuKey: "models:fbx",
     viewer: "none",
-    tiling: false,
+    importJobs: false,
+    tiling: "fbx",
   },
 };
 
@@ -86,7 +111,16 @@ export function resolveModelTypeByMenuKey(menuKey: string): ModelTypeConfig | nu
   return MODEL_TYPE_LIST.find((item) => item.menuKey === menuKey) ?? null;
 }
 
-/** 파일명 / file_format 이 해당 모델 타입에 속하는지 판단한다. */
+/** 파일명에서 확장자만 뽑는다(소문자, 점 없음). */
+function fileExtension(fileName?: string | null): string | null {
+  const ext = fileName?.split(".").pop()?.trim().toLowerCase();
+  return ext || null;
+}
+
+/**
+ * 파일명 / file_format 이 해당 모델 타입의 포맷인지 판단한다.
+ * 서버 file_format 은 확장자에서 파생된 점 없는 소문자이고 null 이 될 수 없다.
+ */
 export function matchesModelType(
   config: ModelTypeConfig,
   fileName?: string | null,
@@ -96,6 +130,12 @@ export function matchesModelType(
   if (format) {
     return config.extensions.includes(format);
   }
-  const ext = fileName?.split(".").pop()?.trim().toLowerCase();
+  const ext = fileExtension(fileName);
   return !!ext && config.extensions.includes(ext);
+}
+
+/** 업로드 창에서 이 파일을 받아줄지 판단한다(zip 컨테이너 포함). */
+export function isUploadableFileName(config: ModelTypeConfig, fileName?: string | null): boolean {
+  const ext = fileExtension(fileName);
+  return !!ext && config.uploadExtensions.includes(ext);
 }

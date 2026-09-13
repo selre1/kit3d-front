@@ -120,7 +120,7 @@ export function ProjectModelsList({
         `${modelType.importApiBase}/${projectId}/${record.file_id}/download`,
         record.file_name || `download.${modelType.key}`
       );
-    } catch (err) {
+    } catch {
       message.error("다운로드에 실패했습니다.");
     } finally {
       setDownloadingId((current) => (current === record.file_id ? null : current));
@@ -160,9 +160,10 @@ export function ProjectModelsList({
         dataIndex: "status",
         key: "status",
         render: (value) => {
-          // 타일링 미지원 타입(FBX)은 임포트 작업 없이 파일만 보관되므로 status 가 비어서 내려온다.
-          if (!value && !modelType.tiling) {
-            return <Tag color="default">변환 대상 아님</Tag>;
+          // 임포트 단계가 없는 타입(FBX)은 파일만 보관되므로 status 가 null 로 내려온다.
+          // 변환은 이 파일이 아니라 변환 탭에서 프로젝트 단위로 실행한다.
+          if (!value && !modelType.importJobs) {
+            return <Tag color="default">임포트 없음</Tag>;
           }
           const props = statusTagProps(value);
           return (
@@ -194,7 +195,7 @@ export function ProjectModelsList({
             disabled={
               !record.file_id ||
               // 임포트 작업이 없는 타입은 업로드만 끝나면 원본을 받을 수 있다.
-              (modelType.tiling && record.status?.toUpperCase() !== "DONE")
+              (modelType.importJobs && record.status?.toUpperCase() !== "DONE")
             }
             onClick={(event) => handleDownload(event, record)}
             aria-label="Download original"
@@ -212,14 +213,17 @@ export function ProjectModelsList({
         ? formatDuration(selected.started_at, selected.finished_at)
         : "";
     // 임포트 작업이 없는 타입은 작업 관련 항목이 모두 비므로 감춘다.
-    if (!modelType.tiling) {
+    if (!modelType.importJobs) {
       return (
         <Descriptions column={1} bordered size="small">
           <Descriptions.Item label="파일 포맷">
             {(selected.file_format || modelType.shortLabel).toUpperCase()}
           </Descriptions.Item>
           <Descriptions.Item label="등록 시간">{selected.uploaded_at || ""}</Descriptions.Item>
-          <Descriptions.Item label="변환">3D Tiles 변환 대상이 아닙니다.</Descriptions.Item>
+          <Descriptions.Item label="용량">{formatBytes(selected.file_size)}</Descriptions.Item>
+          <Descriptions.Item label="변환">
+            변환 탭에서 프로젝트 단위로 실행합니다.
+          </Descriptions.Item>
         </Descriptions>
       );
     }
@@ -239,7 +243,8 @@ export function ProjectModelsList({
     );
   }, [selected, modelType]);
 
-  const canRestart = selected?.status?.toUpperCase() === "FAILED";
+  // 재시도할 임포트 작업이 있는 타입에서만 노출한다(FBX 는 retry 엔드포인트 자체가 없다).
+  const canRestart = modelType.importJobs && selected?.status?.toUpperCase() === "FAILED";
 
   const handleRestart = () => {
     if (!selected) return;

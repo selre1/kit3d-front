@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { Button, Modal, Progress, Spin, Upload, message } from "antd";
+import { Alert, Button, Modal, Progress, Spin, Typography, Upload, message } from "antd";
 import type { UploadFile } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 
 import type { ModelTypeConfig } from "../../../../config/modelTypes";
-import { matchesModelType } from "../../../../config/modelTypes";
+import { isUploadableFileName } from "../../../../config/modelTypes";
 import { apiPost } from "../../../../tools/api";
-import type { ImportJobItem, ImportUploadResponse } from "../../../../types/project";
+import type {
+  ImportJobItem,
+  ImportSkipReason,
+  ImportUploadResponse,
+} from "../../../../types/project";
 import { ProjectModelsList } from "./import/ProjectModelsList";
 
 type ProjectImportTabProps = {
@@ -28,11 +32,18 @@ export function ProjectImportTab({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const getSkipReasonLabel = (reason?: string) => {
-    if (reason === "duplicate_file_name") {
-      return "duplicate file name";
+  /** 서버가 저장을 건너뛴 사유를 사용자 문구로 옮긴다. */
+  const getSkipReasonLabel = (reason?: ImportSkipReason) => {
+    switch (reason) {
+      case "duplicate_file_name":
+        return "같은 이름의 파일이 이미 있습니다";
+      case "no_model_in_archive":
+        return `zip 최상위에 .${modelType.key} 파일이 없습니다`;
+      case "invalid_archive":
+        return "zip 을 읽을 수 없습니다";
+      default:
+        return reason || "알 수 없는 사유";
     }
-    return reason || "unknown";
   };
 
   /**
@@ -49,10 +60,14 @@ export function ProjectImportTab({
     }
 
     if (status === 409) {
-      return detail || `${modelType.shortLabel} 프로젝트가 아닙니다. 프로젝트 타입을 확인해 주세요.`;
+      // 프로젝트 타입이 다른 경우. 파일은 저장되지 않았으므로 부분 업로드가 남지 않는다.
+      const base =
+        detail || `${modelType.shortLabel} 프로젝트가 아닙니다.`;
+      return `${base} ${modelType.shortLabel} 파일은 ${modelType.shortLabel} 프로젝트에 올려주세요. (저장된 파일 없음)`;
     }
     if (status === 400) {
-      return detail || `${modelType.shortLabel} 파일만 업로드할 수 있습니다.`;
+      // 확장자가 경로와 맞지 않는 경우. 한 요청에 확장자가 섞여도 전체가 400 이다.
+      return detail || `${modelType.accept} 파일만 업로드할 수 있습니다.`;
     }
     if (status === 404) {
       return detail || "프로젝트를 찾을 수 없습니다.";
@@ -78,6 +93,12 @@ export function ProjectImportTab({
         message.error({ content: err.message || "Failed to retry import.", key });
       });
   };
+
+  // zip 컨테이너를 받는 타입만 압축 구조를 안내한다.
+  const archiveHint = modelType.uploadExtensions.includes("zip");
+  const uploadLabel = modelType.uploadExtensions
+    .map((ext) => ext.toUpperCase())
+    .join(" / ");
 
   const resetUploadState = () => {
     setFileList([]);
@@ -127,12 +148,13 @@ export function ProjectImportTab({
             .slice(0, 5)
             .map((skipItem) => `${skipItem.file_name} (${getSkipReasonLabel(skipItem.reason)})`)
             .join(", ");
-          const suffix = skipped.length > 5 ? ` +${skipped.length - 5} more` : "";
+          const suffix = skipped.length > 5 ? ` 외 ${skipped.length - 5}건` : "";
           message.warning(
-            `Uploaded ${uploadedCount}, skipped ${skipped.length}: ${preview}${suffix}`
+            `${uploadedCount}건 업로드, ${skipped.length}건 제외: ${preview}${suffix}`,
+            6
           );
         } else {
-          message.success("Upload complete.");
+          message.success("업로드를 완료했습니다.");
         }
 
         setRefreshKey((prev) => prev + 1);
@@ -145,7 +167,7 @@ export function ProjectImportTab({
     };
 
     xhr.onerror = () => {
-      message.error("Upload failed.");
+      message.error("업로드에 실패했습니다.");
       setUploading(false);
     };
 
@@ -188,12 +210,34 @@ export function ProjectImportTab({
         }}
         footer={null}
       >
+        {archiveHint ? (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
+            message="텍스처가 있는 모델은 zip 으로 묶어 올려주세요."
+            description={
+              <Typography.Paragraph style={{ margin: 0 }}>
+                <code>plant.fbx</code> 와 <code>plant.fbm/</code> 을 하나의 zip 으로 묶으면 서버가 풀어서
+                나란히 놓고, 변환할 때 텍스처를 함께 읽습니다.{" "}
+                <strong>
+                  단, <code>.fbx</code> 파일이 zip 최상위에 있어야 합니다.
+                </strong>{" "}
+                폴더째 압축해 <code>tank_export/tank.fbx</code> 처럼 한 겹 감싸이면 받지 않습니다.
+                텍스처가 없다면 <code>.fbx</code> 를 그대로 올리셔도 됩니다.
+                <br />
+                한글 파일명 zip 은 압축 프로그램에 따라 이름이 깨질 수 있어 영문 파일명을 권장합니다.
+              </Typography.Paragraph>
+            }
+          />
+        ) : null}
+
         <Upload.Dragger
           multiple
           accept={modelType.accept}
           fileList={fileList}
           beforeUpload={(file) => {
-            if (!matchesModelType(modelType, file.name)) {
+            if (!isUploadableFileName(modelType, file.name)) {
               message.warning(`${file.name}: ${modelType.accept} 파일만 업로드할 수 있습니다.`);
               return Upload.LIST_IGNORE;
             }
@@ -209,10 +253,10 @@ export function ProjectImportTab({
             <InboxOutlined />
           </p>
           <p className="ant-upload-text">
-            {modelType.shortLabel} 파일을 드래그하거나 클릭해 업로드하세요.
+            {uploadLabel} 파일을 드래그하거나 클릭해 업로드하세요.
           </p>
           <p className="ant-upload-hint">
-            여러 개 {modelType.shortLabel} 파일을 한 번에 올릴 수 있습니다.
+            여러 개를 한 번에 올릴 수 있습니다. 같은 이름의 파일은 제외됩니다.
           </p>
         </Upload.Dragger>
 
