@@ -38,7 +38,7 @@ export function ProjectImportTab({
       case "duplicate_file_name":
         return "같은 이름의 파일이 이미 있습니다";
       case "no_model_in_archive":
-        return `zip 최상위에 .${modelType.key} 파일이 없습니다`;
+        return `zip 에 .${modelType.key} 파일이 없습니다`;
       case "invalid_archive":
         return "zip 을 읽을 수 없습니다";
       default:
@@ -218,12 +218,10 @@ export function ProjectImportTab({
             message="텍스처가 있는 모델은 zip 으로 묶어 올려주세요."
             description={
               <Typography.Paragraph style={{ margin: 0 }}>
-                <code>plant.fbx</code> 와 <code>plant.fbm/</code> 을 하나의 zip 으로 묶으면 서버가 풀어서
-                나란히 놓고, 변환할 때 텍스처를 함께 읽습니다.{" "}
-                <strong>
-                  단, <code>.fbx</code> 파일이 zip 최상위에 있어야 합니다.
-                </strong>{" "}
-                폴더째 압축해 <code>tank_export/tank.fbx</code> 처럼 한 겹 감싸이면 받지 않습니다.
+                모델과 텍스처 폴더를 하나의 zip 으로 묶으면 서버가 풀어서 나란히 놓고,
+                변환할 때 텍스처를 함께 읽습니다. <strong>폴더째 압축하셔도 됩니다</strong> —
+                모든 항목이 같은 폴더 아래에 있으면 서버가 그 폴더를 벗겨냅니다.
+                동반 폴더 이름은 <code>.fbm</code> 이든 <code>embedded_textures/</code> 든 상관없습니다.
                 텍스처가 없다면 <code>.fbx</code> 를 그대로 올리셔도 됩니다.
                 <br />
                 한글 파일명 zip 은 압축 프로그램에 따라 이름이 깨질 수 있어 영문 파일명을 권장합니다.

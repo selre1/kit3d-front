@@ -14,35 +14,15 @@ import {
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
   DownloadOutlined,
-  ExclamationCircleOutlined,
   FileTextOutlined,
-  LoadingOutlined,
 } from "@ant-design/icons";
 import type { ModelTypeConfig } from "../../../../../config/modelTypes";
+import { StatusTag } from "../statusTag";
 import { apiDownload, apiGet } from "../../../../../tools/api";
 import { IfcViewer } from "../../../../../components/ifc/IfcViewer";
 import type { ImportJobItem } from "../../../../../types/project";
 import { formatBytes, formatDuration, parseDate } from "../../../../../utils/format";
-
-function statusTagProps(status?: string | null) {
-  const normalized = status?.toUpperCase();
-  switch (normalized) {
-    case "DONE":
-      return { color: "success", icon: <CheckCircleOutlined /> };
-    case "RUNNING":
-      return { color: "processing", icon: <LoadingOutlined spin /> };
-    case "FAILED":
-      return { color: "error", icon: <CloseCircleOutlined /> };
-    case "PENDING":
-      return { color: "warning", icon: <ExclamationCircleOutlined /> };
-    default:
-      return { color: "default", icon: <ClockCircleOutlined /> };
-  }
-}
 
 type ProjectModelsListProps = {
   projectId: string;
@@ -165,12 +145,7 @@ export function ProjectModelsList({
           if (!value && !modelType.importJobs) {
             return <Tag color="default">임포트 없음</Tag>;
           }
-          const props = statusTagProps(value);
-          return (
-            <Tag color={props.color} icon={props.icon} variant="solid">
-              {value || "PENDING"}
-            </Tag>
-          );
+          return <StatusTag status={value} />;
         },
       },
       {
