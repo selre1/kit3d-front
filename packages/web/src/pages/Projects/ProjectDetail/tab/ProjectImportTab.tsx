@@ -32,7 +32,7 @@ export function ProjectImportTab({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  /** 서버가 저장을 건너뛴 사유를 사용자 문구로 옮긴다. */
+  /** skipped[].reason 을 사용자 문구로 옮긴다. */
   const getSkipReasonLabel = (reason?: ImportSkipReason) => {
     switch (reason) {
       case "duplicate_file_name":
@@ -46,11 +46,7 @@ export function ProjectImportTab({
     }
   };
 
-  /**
-   * 업로드 실패 안내.
-   * 400 은 확장자가 경로와 맞지 않는 경우, 409 는 프로젝트 타입이 다른 경우(파일은 저장되지 않음),
-   * 404 는 프로젝트가 없는 경우로 서버가 구분해 준다.
-   */
+  /** 업로드 실패 안내. 400 확장자 / 409 프로젝트 타입 / 404 프로젝트 없음. */
   const getUploadErrorMessage = (status: number, responseText: string) => {
     let detail = "";
     try {
@@ -60,13 +56,13 @@ export function ProjectImportTab({
     }
 
     if (status === 409) {
-      // 프로젝트 타입이 다른 경우. 파일은 저장되지 않았으므로 부분 업로드가 남지 않는다.
+      // 타입 검사가 저장 전에 돌아 파일이 남지 않는다.
       const base =
         detail || `${modelType.shortLabel} 프로젝트가 아닙니다.`;
       return `${base} ${modelType.shortLabel} 파일은 ${modelType.shortLabel} 프로젝트에 올려주세요. (저장된 파일 없음)`;
     }
     if (status === 400) {
-      // 확장자가 경로와 맞지 않는 경우. 한 요청에 확장자가 섞여도 전체가 400 이다.
+      // 한 요청에 확장자가 섞이면 전체가 400 이다.
       return detail || `${modelType.accept} 파일만 업로드할 수 있습니다.`;
     }
     if (status === 404) {
@@ -94,7 +90,7 @@ export function ProjectImportTab({
       });
   };
 
-  // zip 컨테이너를 받는 타입만 압축 구조를 안내한다.
+  // zip 을 받는 타입에만 압축 안내를 띄운다.
   const archiveHint = modelType.uploadExtensions.includes("zip");
   const uploadLabel = modelType.uploadExtensions
     .map((ext) => ext.toUpperCase())

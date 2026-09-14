@@ -197,6 +197,7 @@ export function ProjectConversionTab({ projectId, modelType }: ProjectConversion
         )}
       </div>
 
+      {/* 모달은 열릴 때만 마운트한다. 닫으면 내부 상태가 같이 사라진다. */}
       {convertOpen ? (
         <ConvertJobModal
           projectId={projectId}

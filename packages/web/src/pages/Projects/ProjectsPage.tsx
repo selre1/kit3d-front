@@ -9,11 +9,16 @@ import {
   Input,
   Modal,
   Pagination,
+  Select,
   Spin,
+  Typography,
+  message,
 } from "antd";
 import { RiFileTextLine } from "react-icons/ri";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { CRS_OPTIONS, isCrsCode } from "../../config/crs";
+import type { CrsCode } from "../../config/crs";
 import { resolveModelType } from "../../config/modelTypes";
 import { apiGet, apiPost } from "../../tools/api";
 import type { Project } from "../../types/project";
@@ -30,11 +35,12 @@ type ProjectCard = {
 
 type ProjectFormValues = {
   name: string;
+  crs: CrsCode;
   description?: string;
 };
 
 function mapProjectToCard(project: Project): ProjectCard {
-  // 프로젝트가 타입 전용이므로 models_count 가 곧 그 타입의 모델 수다.
+  // 프로젝트가 한 타입만 담으므로 models_count 가 곧 그 타입의 모델 수다.
   const models = project.models_count ?? 0;
 
   return {
@@ -134,15 +140,16 @@ export function ProjectsPage() {
     try {
       const values = await form.validateFields();
       setCreating(true);
-      // 경로가 프로젝트 타입을 결정한다. body 에는 타입을 넣지 않는다.
+      // 경로가 타입을 정한다. body 에 타입을 넣지 않는다.
       await apiPost<Project>(`${modelType.projectApiBase}/create`, values);
       form.resetFields();
       setCreateOpen(false);
       setPage(1);
       setRefreshKey((prev) => prev + 1);
     } catch (err) {
+      // 폼 검증 실패는 antd 가 필드에 표시하므로 여기서 다시 알리지 않는다.
       if (err instanceof Error) {
-        setError(err.message);
+        message.error(err.message || "프로젝트를 만들지 못했습니다.");
       }
     } finally {
       setCreating(false);
@@ -299,6 +306,33 @@ export function ProjectsPage() {
             rules={[{ required: true, message: "프로젝트 이름을 입력하세요." }]}
           >
             <Input placeholder="예: 테스트 프로젝트" />
+          </Form.Item>
+          <Form.Item
+            label="좌표계"
+            name="crs"
+            rules={[
+              { required: true, message: "좌표계를 선택하세요." },
+              {
+                validator: (_, value) =>
+                  isCrsCode(value)
+                    ? Promise.resolve()
+                    : Promise.reject(new Error("지원되는 좌표계를 선택하세요.")),
+              },
+            ]}
+            extra="임포트와 변환이 모두 이 값을 씁니다. 생성 후에는 바꿀 수 없습니다."
+          >
+            <Select
+              placeholder="좌표계를 선택하세요"
+              options={CRS_OPTIONS.map((option) => ({
+                value: option.value,
+                label: (
+                  <span>
+                    {option.label}{" "}
+                    <Typography.Text type="secondary">{option.hint}</Typography.Text>
+                  </span>
+                ),
+              }))}
+            />
           </Form.Item>
           <Form.Item label="설명 (선택)" name="description">
             <Input.TextArea placeholder="설명 없음" rows={3} />

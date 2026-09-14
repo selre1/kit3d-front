@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button, Descriptions, Flex, Modal, Typography } from "antd";
 
+import { crsLabel } from "../../../../../config/crs";
 import { formatDuration } from "../../../../../utils/format";
 import { StatusTag } from "../statusTag";
 import type { TileRow } from "./types";
@@ -80,7 +81,7 @@ export function TileJobDetailModal({
             <Descriptions.Item label="변환 옵션">
               {tile.options ? (
                 <Flex vertical gap={2}>
-                  <Typography.Text>crs: {tile.options.crs ?? "-"}</Typography.Text>
+                  <Typography.Text>좌표계: {crsLabel(tile.options.crs)}</Typography.Text>
                   <Typography.Text>
                     rotate_x_axis: {tile.options.rotateXAxis ?? "-"}
                   </Typography.Text>

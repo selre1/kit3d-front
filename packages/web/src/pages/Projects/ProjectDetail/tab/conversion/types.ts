@@ -5,7 +5,6 @@ export const POLL_INTERVAL_MS = 5000;
 export const TERMINAL_STATUSES = ["DONE", "FAILED"];
 
 export const FBX_DEFAULTS = {
-  crs: "5187",
   rotateXAxis: 90,
   splitByNode: true,
 } as const;

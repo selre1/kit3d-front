@@ -39,6 +39,7 @@ export function ConvertJobModal({
 }: ConvertJobModalProps) {
   const isFbx = modelType.tiling === "fbx";
 
+  // IFC 만 임포트 상태를 먼저 읽어 게이팅한다. FBX 는 곧바로 변환할 수 있다.
   const [statusLoading, setStatusLoading] = useState(!isFbx);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [statusItems, setStatusItems] = useState<ImportStatusItem[]>([]);
@@ -49,7 +50,6 @@ export function ConvertJobModal({
     IFC_DEFAULTS.maxFeaturesPerTile
   );
   const [geometricError, setGeometricError] = useState<number>(IFC_DEFAULTS.geometricError);
-  const [crs, setCrs] = useState<string>(FBX_DEFAULTS.crs);
   const [rotateXAxis, setRotateXAxis] = useState<number>(FBX_DEFAULTS.rotateXAxis);
   const [splitByNode, setSplitByNode] = useState<boolean>(FBX_DEFAULTS.splitByNode);
 
@@ -96,11 +96,7 @@ export function ConvertJobModal({
 
     const trimmedName = tileName.trim();
     const payload: Record<string, unknown> = isFbx
-      ? {
-          crs: crs.trim() || FBX_DEFAULTS.crs,
-          rotate_x_axis: rotateXAxis,
-          split_by_node: splitByNode,
-        }
+      ? { rotate_x_axis: rotateXAxis, split_by_node: splitByNode }
       : { max_features_per_tile: maxFeaturesPerTile, geometric_error: geometricError };
     if (trimmedName) payload.tile_name = trimmedName;
 
@@ -120,6 +116,7 @@ export function ConvertJobModal({
         onClose();
       })
       .catch((err: unknown) => {
+        // 409 = 변환할 파일이 프로젝트에 없음
         if (isApiError(err) && err.status === 409) {
           message.error(
             err.detail ||
@@ -187,18 +184,6 @@ export function ConvertJobModal({
 
               {isFbx ? (
                 <>
-                  <Flex vertical gap={6}>
-                    <Typography.Text>좌표계(crs)</Typography.Text>
-                    <Input
-                      value={crs}
-                      onChange={(event) => setCrs(event.target.value)}
-                      placeholder={FBX_DEFAULTS.crs}
-                      maxLength={20}
-                    />
-                    <Typography.Text type="secondary">
-                      EPSG 코드 (기본값: {FBX_DEFAULTS.crs}, 중부원점 2010)
-                    </Typography.Text>
-                  </Flex>
                   <Flex vertical gap={6}>
                     <Typography.Text>X축 회전(rotate_x_axis)</Typography.Text>
                     <InputNumber

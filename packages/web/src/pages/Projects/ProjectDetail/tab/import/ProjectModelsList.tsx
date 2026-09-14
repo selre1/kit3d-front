@@ -65,7 +65,7 @@ export function ProjectModelsList({
     )
       .then((data) => {
         if (!active) return;
-        // 타입별 엔드포인트라 서버가 이미 포맷을 걸러서 내려준다.
+        // 타입별 엔드포인트라 서버가 포맷을 이미 걸러준다.
         const hasMore = data.length > pageSize;
         const sliced = data.slice(0, pageSize);
         const sorted = [...sliced].sort(
@@ -140,8 +140,7 @@ export function ProjectModelsList({
         dataIndex: "status",
         key: "status",
         render: (value) => {
-          // 임포트 단계가 없는 타입(FBX)은 파일만 보관되므로 status 가 null 로 내려온다.
-          // 변환은 이 파일이 아니라 변환 탭에서 프로젝트 단위로 실행한다.
+          // 임포트가 없는 타입은 status 가 null. 변환은 변환 탭에서 프로젝트 단위로 한다.
           if (!value && !modelType.importJobs) {
             return <Tag color="default">임포트 없음</Tag>;
           }
@@ -169,7 +168,7 @@ export function ProjectModelsList({
             loading={downloadingId === record.file_id}
             disabled={
               !record.file_id ||
-              // 임포트 작업이 없는 타입은 업로드만 끝나면 원본을 받을 수 있다.
+              // 임포트가 없으면 업로드 직후부터 받을 수 있다.
               (modelType.importJobs && record.status?.toUpperCase() !== "DONE")
             }
             onClick={(event) => handleDownload(event, record)}
@@ -187,7 +186,7 @@ export function ProjectModelsList({
       selected.status?.toUpperCase() === "DONE"
         ? formatDuration(selected.started_at, selected.finished_at)
         : "";
-    // 임포트 작업이 없는 타입은 작업 관련 항목이 모두 비므로 감춘다.
+    // 임포트가 없으면 작업 관련 항목이 모두 비어 감춘다.
     if (!modelType.importJobs) {
       return (
         <Descriptions column={1} bordered size="small">
@@ -218,7 +217,7 @@ export function ProjectModelsList({
     );
   }, [selected, modelType]);
 
-  // 재시도할 임포트 작업이 있는 타입에서만 노출한다(FBX 는 retry 엔드포인트 자체가 없다).
+  // 재시도할 임포트가 있는 타입에만 노출한다.
   const canRestart = modelType.importJobs && selected?.status?.toUpperCase() === "FAILED";
 
   const handleRestart = () => {

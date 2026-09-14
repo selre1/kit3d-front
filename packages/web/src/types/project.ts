@@ -1,3 +1,4 @@
+import type { CrsCode } from "../config/crs";
 import type { ModelTypeKey } from "../config/modelTypes";
 
 export type Project = {
@@ -5,9 +6,11 @@ export type Project = {
   name: string;
   description?: string | null;
   created_at?: string | null;
-  /** 프로젝트가 속한 모델 타입. 프로젝트는 타입 전용이라 경로로 이미 갈린다. */
+  /** 프로젝트가 속한 타입. 프로젝트는 한 타입만 담는다. */
   format?: ModelTypeKey | null;
-  /** 그 프로젝트의 파일 수. 프로젝트가 한 타입에 속하므로 곧 해당 타입의 모델 수다. */
+  /** 임포트·변환이 함께 쓰는 좌표계. 생성 시 정하고 이후 바뀌지 않는다. */
+  crs: CrsCode;
+  /** 이 프로젝트의 파일 수. */
   models_count?: number | null;
 };
 
@@ -29,15 +32,15 @@ export type ImportJobItem = {
 };
 
 /**
- * 업로드 요청은 200 이지만 개별 파일이 저장되지 않은 사유.
- * 서버가 내려주는 코드가 늘어날 수 있어 임의 문자열도 받는다.
+ * 업로드는 201 인데 그 파일만 저장되지 않은 사유.
+ * 서버가 코드를 추가할 수 있어 임의 문자열도 허용한다.
  */
 export type ImportSkipReason =
-  /** 같은 이름의 파일이 이미 프로젝트에 있음(대소문자 무시) */
+  /** 같은 이름이 이미 있음. 대소문자 무시 */
   | "duplicate_file_name"
-  /** zip 최상위에 모델 파일이 없음 */
+  /** 감싼 폴더를 벗긴 뒤에도 모델 파일이 없음 */
   | "no_model_in_archive"
-  /** 깨진 zip, 경로 탈출, 엔트리/해제 용량 초과 */
+  /** 깨진 zip, 경로 탈출, 엔트리 2000개·해제 2GB 초과 */
   | "invalid_archive"
   | (string & {});
 
@@ -46,7 +49,7 @@ export type ImportSkippedItem = {
   reason: ImportSkipReason;
 };
 
-/** IFC 타일링 작업. 타일셋이 IFC 클래스 단위로 쪼개진다. */
+/** IFC 타일링 작업. 타일셋이 IFC 클래스별로 쪼개진다. */
 export type IfcTileJob = {
   tile_job_id?: string | null;
   project_id?: string | null;
@@ -67,20 +70,17 @@ export type IfcTileJob = {
   }[];
 };
 
-/** FBX 타일링 요청 옵션. 전부 선택값이라 비우면 서버 기본값으로 돈다. */
+/** FBX 타일링 옵션. 전부 선택값. 좌표계는 project.crs 를 쓴다. */
 export type FbxTilingOptions = {
-  /** EPSG 코드 문자열. 기본 "5187"(중부원점 2010) */
-  crs?: string;
-  /** Z-up / Y-up 보정 각도. 기본 90 */
+  /** Z-up↔Y-up 보정 각도. 기본 90 */
   rotate_x_axis?: number;
-  /** 씬 노드 단위 분할 여부. 기본 true */
+  /** 씬 노드 단위로 분할. 기본 true */
   split_by_node?: boolean;
 };
 
 /**
- * FBX 타일링 작업.
- * 프로젝트의 FBX 전체가 타일셋 하나가 되므로 클래스별 분해가 없고,
- * 결과 경로는 tileset_url 한 건이다(모델 원본과 달리 /tiles/ prefix).
+ * FBX 타일링 작업. 프로젝트의 FBX 전체가 타일셋 하나가 된다.
+ * tileset_url 은 /tiles/ 로 시작한다. 모델 원본(/assets/)과 prefix 가 다르다.
  */
 export type FbxTileJob = {
   fbx_job_id?: string | null;
@@ -89,10 +89,11 @@ export type FbxTileJob = {
   status?: string | null;
   tileset_url?: string | null;
   output_dir?: string | null;
-  /** FAILED 일 때 변환기 원문 로그(마지막 60줄, 영문) */
+  /** FAILED 일 때 변환기 원문 로그. 마지막 60줄, 영문 */
   error?: string | null;
   options?: {
-    crs?: string | null;
+    /** 요청이 아니라 project.crs 에서 채워져 돌아온다. */
+    crs?: CrsCode | null;
     rotateXAxis?: number | null;
     splitByNode?: boolean | null;
   } | null;
