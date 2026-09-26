@@ -254,8 +254,7 @@ export function ProjectImportTab({
             description={
               <ul style={{ margin: 0, paddingLeft: 18, listStyleType: "disc" }}>
                 <li style={{ marginBottom: 6 }}>
-                  텍스처가 있으면 FBX와 같은 이름의 <code>.fbm</code> 폴더에 텍스처를 넣고
-                  zip으로 압축해 주세요.
+                  FBX/텍스처를 zip파일로 업로드하세요.
                   <pre
                     style={{
                       margin: "6px 0 0",
@@ -289,7 +288,6 @@ export function ProjectImportTab({
           onRemove={(file) => {
             setFileList((prev) => prev.filter((item) => item.uid !== file.uid));
           }}
-          style={{ padding: 16 }}
         >
           <p className="ant-upload-drag-icon">
             <InboxOutlined />
