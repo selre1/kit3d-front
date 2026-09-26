@@ -30,6 +30,8 @@ export function ProjectImportTab({
   const [uploading, setUploading] = useState(false);
   const [uploadPercent, setUploadPercent] = useState(0);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  /** 업로드 실패 안내. 모달 안에 남겨 두고 파일을 고쳐 다시 올리게 한다. */
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   /** skipped[].reason 을 사용자 문구로 옮긴다. */
@@ -46,15 +48,25 @@ export function ProjectImportTab({
     }
   };
 
-  /** 업로드 실패 안내. 400 확장자 / 409 프로젝트 타입 / 404 프로젝트 없음. */
+  /**
+   * 업로드 실패 안내. 400 확장자 / 409 프로젝트 타입 / 404 프로젝트 없음 / 422 텍스처 누락.
+   * FastAPI 요청 검증 실패도 422 인데, 그때는 detail 이 배열이라 문자열 여부로 구분한다.
+   */
   const getUploadErrorMessage = (status: number, responseText: string) => {
-    let detail = "";
+    let rawDetail: unknown;
     try {
-      detail = (JSON.parse(responseText) as { detail?: string })?.detail ?? "";
+      rawDetail = (JSON.parse(responseText) as { detail?: unknown })?.detail;
     } catch {
-      detail = "";
+      rawDetail = undefined;
     }
+    const detail = typeof rawDetail === "string" ? rawDetail : "";
 
+    if (status === 422) {
+      // 텍스처 누락이면 detail 을 그대로 보여준다. 검사가 저장 전에 돌아 파일이 남지 않는다.
+      return detail
+        ? `${detail} (저장된 파일 없음)`
+        : "업로드 요청 형식이 올바르지 않습니다.";
+    }
     if (status === 409) {
       // 타입 검사가 저장 전에 돌아 파일이 남지 않는다.
       const base =
@@ -100,6 +112,7 @@ export function ProjectImportTab({
     setFileList([]);
     setUploading(false);
     setUploadPercent(0);
+    setUploadError(null);
   };
 
   const handleUpload = () => {
@@ -111,6 +124,7 @@ export function ProjectImportTab({
 
     setUploading(true);
     setUploadPercent(0);
+    setUploadError(null);
 
     const formData = new FormData();
     fileList.forEach((file) => {
@@ -157,13 +171,13 @@ export function ProjectImportTab({
         setUploadOpen(false);
         resetUploadState();
       } else {
-        message.error(getUploadErrorMessage(xhr.status, xhr.responseText));
+        setUploadError(getUploadErrorMessage(xhr.status, xhr.responseText));
         setUploading(false);
       }
     };
 
     xhr.onerror = () => {
-      message.error("업로드에 실패했습니다.");
+      setUploadError("업로드에 실패했습니다.");
       setUploading(false);
     };
 
@@ -214,13 +228,12 @@ export function ProjectImportTab({
             message="텍스처가 있는 모델은 zip 으로 묶어 올려주세요."
             description={
               <Typography.Paragraph style={{ margin: 0 }}>
-                모델과 텍스처 폴더를 하나의 zip 으로 묶으면 서버가 풀어서 나란히 놓고,
-                변환할 때 텍스처를 함께 읽습니다. <strong>폴더째 압축하셔도 됩니다</strong> —
-                모든 항목이 같은 폴더 아래에 있으면 서버가 그 폴더를 벗겨냅니다.
-                동반 폴더 이름은 <code>.fbm</code> 이든 <code>embedded_textures/</code> 든 상관없습니다.
+                zip 안에는 <code>0.fbx</code> 와 같은 이름의 <code>0.fbm/</code> 폴더가 있고,
+                하위에 텍스처 이미지(jpg, png 등)가 있어야 합니다.
+                <br />
                 텍스처가 없다면 <code>.fbx</code> 를 그대로 올리셔도 됩니다.
                 <br />
-                한글 파일명 zip 은 압축 프로그램에 따라 이름이 깨질 수 있어 영문 파일명을 권장합니다.
+                zip 은 영문 파일명을 권장합니다.
               </Typography.Paragraph>
             }
           />
@@ -253,6 +266,17 @@ export function ProjectImportTab({
             여러 개를 한 번에 올릴 수 있습니다. 같은 이름의 파일은 제외됩니다.
           </p>
         </Upload.Dragger>
+
+        {uploadError ? (
+          <Alert
+            type="error"
+            showIcon
+            closable
+            style={{ marginTop: 12 }}
+            message={uploadError}
+            onClose={() => setUploadError(null)}
+          />
+        ) : null}
 
         {uploading ? (
           <div style={{ marginTop: 12 }}>
